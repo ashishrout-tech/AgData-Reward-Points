@@ -1,0 +1,79 @@
+# Build folders
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE directories
+.vs/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build results
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+*.log.*
+
+# Test results
+TestResults/
+*.coverage
+*.coveragexml
+
+# Package folders
+packages/
+.nuget/
+*.nupkg
+.nuget/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Publish output
+publish/
+wwwroot/
+
+# Rider specific
+.idea/
+.rider/
+*.sln.iml
+
+# Environment and secrets
+*.env
+*.env.local
+appsettings.Development.json
+secrets.json
+.env
+
+# Optional: ignore your local tools
+tools/
+
+# Runtime files
+*.db
+*.sqlite
+*.sqlite3
+
+# Node modules (if any frontend)
+node_modules/
+dist/
+
+# Misc
+.DS_Store
+*.swp
+*~
+.classpath
+.project
+.pydevproject
