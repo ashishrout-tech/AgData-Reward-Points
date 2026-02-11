@@ -41,7 +41,7 @@ namespace Project.API.Controllers
         private bool IsAdmin()
         {
             var roleClaim = User.FindFirst(ClaimTypes.Role);
-            return roleClaim?.Value == "Admin";
+            return roleClaim?.Value == "ADMIN";
         }
 
         /// <summary>
@@ -67,7 +67,14 @@ namespace Project.API.Controllers
                 var adminAwards = await _transactionRepo.GetUserAdminAwardsAsync(userId, null, 0, 1000, cancellationToken);
                 var refunds = await _redemptionRepo.GetUserRedemptionsByStatusAsync(userId, 2, 0, 1000, cancellationToken); // Status 2 = Rejected
 
-                var summary = new PointsSummaryDto
+
+				// Get redemption stats
+				var pendingCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(0, userId, cancellationToken);
+				var approvedCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(1, userId, cancellationToken);
+				var rejectedCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(2, userId, cancellationToken);
+				var totalRedemptions = pendingCount + approvedCount + rejectedCount;
+
+				var summary = new PointsSummaryDto
                 {
                     UserId = userId,
                     UserName = userAccount?.User?.Name ?? "Unknown",
@@ -94,10 +101,12 @@ namespace Project.API.Controllers
                     },
                     Redemptions = new RedemptionSummaryDto
                     {
-                        Pending = await _redemptionRepo.GetRedemptionCountByStatusAsync(0, cancellationToken),
-                        Approved = await _redemptionRepo.GetRedemptionCountByStatusAsync(1, cancellationToken),
-                        Rejected = await _redemptionRepo.GetRedemptionCountByStatusAsync(2, cancellationToken)
-                    }
+                        Total = pendingCount + approvedCount + rejectedCount,
+						Pending = pendingCount,
+                        Approved = approvedCount,
+                        Rejected = rejectedCount,
+                        PointsUsed = totalRedeemed
+					}
                 };
 
                 return Ok(summary);
@@ -136,19 +145,20 @@ namespace Project.API.Controllers
                     .OrderByDescending(t => t.TimeStamp)
                     .ToList();
 
+
                 var groupedByDate = userTransactions
                     .GroupBy(t => t.TimeStamp.Date)
                     .OrderByDescending(g => g.Key)
                     .Select(g => new ActivityTimelineDto
                     {
                         Date = g.Key,
-                        Events = g.Select(t => new ActivityEventDto
+                        Transactions = g.Select(t => new ActivityTransactionDto
                         {
-                            Type = "Transaction",
-                            Description = t.IsReversed ? $"Transaction reversed: {t.ReversalReason}" : $"{t.Points} points earned",
+                            Type = (int)t.Type == 0 ? "Earn": "Redeem",
+                            Description = !string.IsNullOrEmpty(t.Reason) ? t.Reason : ((int)t.Type == 0 ? "Points Earned" : "Points Redeemed"),
                             Points = t.Points,
-                            TimeStamp = t.TimeStamp
-                        }).Cast<ActivityEventDto>().ToList()
+                            TimeStamp = t.TimeStamp.TimeOfDay
+                        }).Cast<ActivityTransactionDto>().ToList()
                     })
                     .ToList();
 
@@ -165,7 +175,7 @@ namespace Project.API.Controllers
         /// Get admin dashboard (Admin only)
         /// </summary>
         [HttpGet("admin/dashboard")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<AdminDashboardDto>> GetAdminDashboard(
             CancellationToken cancellationToken)
         {
@@ -175,16 +185,16 @@ namespace Project.API.Controllers
 
                 // Get transaction stats
                 var today = DateTime.UtcNow.Date;
-                var recentTransactions = await _transactionRepo.GetRecentTransactionsAsync(7, 100, cancellationToken);
+                var recentTransactions = await _transactionRepo.GetRecentTransactionsAsync(null, 100, cancellationToken);
                 var todayCount = recentTransactions.Count(t => t.TimeStamp.Date == today);
                 var eventEarningsCount = recentTransactions.Count(t => (int)t.Source == 0);
                 var adminAwardsCount = recentTransactions.Count(t => (int)t.Source == 1);
                 var refundsCount = recentTransactions.Count(t => (int)t.Source == 2);
 
                 // Get redemption stats
-                var pendingCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(0, cancellationToken);
-                var approvedCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(1, cancellationToken);
-                var rejectedCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(2, cancellationToken);
+                var pendingCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(0, null, cancellationToken);
+                var approvedCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(1, null, cancellationToken);
+                var rejectedCount = await _redemptionRepo.GetRedemptionCountByStatusAsync(2, null, cancellationToken);
                 var totalRedemptions = pendingCount + approvedCount + rejectedCount;
 
                 // Get top earners
@@ -214,12 +224,14 @@ namespace Project.API.Controllers
                     TopEarners = topEarners.Select(x => new TopEarnerDto
                     {
                         UserId = x.UserId,
+                        PhotoId = x.PhotoId,
                         Name = x.UserName,
                         TotalPoints = x.TotalPoints
                     }).ToList(),
                     TopProducts = topProducts.Select(x => new TopRedemptionProductDto
                     {
                         ProductId = x.ProductId,
+                        PhotoId = x.PhotoId,
                         Name = x.ProductName,
                         RedemptionCount = x.RedemptionCount
                     }).ToList(),

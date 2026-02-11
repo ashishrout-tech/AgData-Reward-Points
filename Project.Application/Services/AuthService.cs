@@ -7,22 +7,30 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using Project.Application.DTOs.User;
 using Project.Domain.Interfaces;
+using Project.Domain.Entities.Users;
+using Project.Domain.Entities.Auth;
 
 namespace Project.Application.Services
 {
     public class AuthService : IAuthService
     {
         private readonly IUserAsyncRepository _userRepository;
-        private readonly IConfiguration _configuration;
+        private readonly IPasswordResetTokenAsyncRepository _passwordResetTokenRepository;
+        private readonly IEmailService _emailService;
+		private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             IUserAsyncRepository userRepository,
-            IConfiguration configuration,
+            IPasswordResetTokenAsyncRepository passwordResetTokenRepository,
+            IEmailService emailService,
+			IConfiguration configuration,
             ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
-            _configuration = configuration;
+            _passwordResetTokenRepository = passwordResetTokenRepository;
+            _emailService = emailService;
+			_configuration = configuration;
             _logger = logger;
         }
 
@@ -51,13 +59,112 @@ namespace Project.Application.Services
                 UserId = user.Id,
                 Name = user.Name,
                 Email = user.Email,
-                Role = user.Role,
+                Role = user.Role == 0 ? "EMPLOYEE" : "ADMIN",
                 AccessToken = token,
                 ExpiresAt = expiresAt
             };
         }
 
-        private string GenerateJwtToken(Domain.Entities.Users.User user)
+        public async Task<bool> SendPasswordResetMailAsync(string email, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+				var user = await _userRepository.GetByEmailAsync(email);
+				if (user == null || !user.IsActive)
+				{
+					_logger.LogWarning("Password reset requested for non-existent or inactive email: {Email}", email);
+					return false;
+				}
+                await _passwordResetTokenRepository.MarkUsedAsPreviousToken(user.Id, cancellationToken);
+
+				var resetToken = await GeneratePasswordResetToken(user, cancellationToken);
+				var resetLink = $"{_configuration["Frontend:Url"]}/reset-link?token={resetToken.TokenHash}";
+				string mailSubject = "Please reset the password";
+				string mailBody = $"The reset link: {resetLink}";
+				await _emailService.SendAsync(email, mailSubject, mailBody);
+				return true;
+			}
+            catch (Exception ex)
+            {
+                _logger.LogError("Error sending mail: {Message}", ex.Message);
+                throw;
+            }
+		}
+
+        public async Task<bool> ResetPasswordAsync(string token, string newPassword, CancellationToken cancellationToken = default)
+        {
+			var resetToken = await _passwordResetTokenRepository.GetByTokenHashAsync(token);
+			if (resetToken == null)
+			{
+				_logger.LogWarning("Invalid password reset token attempted");
+				throw new UnauthorizedAccessException("Invalid or expired reset token");
+			}
+
+			if (resetToken.UsedAt != null)
+			{
+				_logger.LogWarning("Attempted to reuse password reset token: {TokenId}", resetToken.Id);
+				throw new UnauthorizedAccessException("This reset link has already been used");
+			}
+
+			if (resetToken.ExpiresAt < DateTime.UtcNow)
+			{
+				_logger.LogWarning("Expired password reset token attempted: {TokenId}", resetToken.Id);
+				throw new UnauthorizedAccessException("This reset link has expired");
+			}
+
+			var user = await _userRepository.GetByIdAsync(resetToken.UserId, cancellationToken);
+			if (user == null || !user.IsActive)
+			{
+				throw new UnauthorizedAccessException("User not found or inactive");
+			}
+
+			user.ChangePassword(null, newPassword);
+			await _userRepository.UpdateAsync(user, cancellationToken);
+
+			resetToken.UsedAt = DateTime.UtcNow;
+			await _passwordResetTokenRepository.UpdateAsync(resetToken, cancellationToken);
+			_logger.LogInformation("Password reset successful for user: {UserId}", user.Id);
+
+			return true;
+		}
+
+        private async Task<PasswordResetToken> GeneratePasswordResetToken(User user, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+				var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["ResetJwt:Secret"]!));
+				var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+				var claims = new[]
+				{
+				    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+				    new Claim(ClaimTypes.Email, user.Email)
+			    };
+
+				var tokenExpiry = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["ResetJwt:ExpiresInMinutes"] ?? "30"));
+
+
+				var token = new JwtSecurityToken(
+					issuer: _configuration["ResetJwt:Issuer"],
+					audience: _configuration["ResetJwt:Audience"],
+					claims: claims,
+					expires: tokenExpiry,
+					signingCredentials: credentials);
+
+				var generatedTokenHash = new JwtSecurityTokenHandler().WriteToken(token);
+				PasswordResetToken passwordResetToken = new PasswordResetToken(user.Id, generatedTokenHash, tokenExpiry);
+
+				var createdToken = await _passwordResetTokenRepository.AddAsync(passwordResetToken, cancellationToken);
+				return createdToken;
+			}
+            catch (Exception ex)
+            {
+                _logger.LogError("Error generating password reset token: {Message}", ex.Message);
+                throw;
+			}
+		}
+
+        private string GenerateJwtToken(User user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Secret"]!));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

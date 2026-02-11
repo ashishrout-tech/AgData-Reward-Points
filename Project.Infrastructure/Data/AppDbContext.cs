@@ -1,14 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Project.Domain.Entities;
+using Project.Domain.Entities.Auth;
 using Project.Domain.Entities.Event;
 using Project.Domain.Entities.Product;
 using Project.Domain.Entities.Users;
-using Project.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Project.Infrastructure.Data
 {
@@ -38,12 +33,14 @@ namespace Project.Infrastructure.Data
         // User-related entities
         public DbSet<User> Users { get; set; }
         public DbSet<UserAccount> UserAccounts { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
         // Other domain entities
         public DbSet<Redemption> Redemptions { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Photo> Photos { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             // Only configure if not already configured by dependency injection
             if (!optionsBuilder.IsConfigured)
@@ -54,8 +51,10 @@ namespace Project.Infrastructure.Data
                 if (string.IsNullOrEmpty(connectionString))
                 {
                     // Fallback to default (for local development only)
-                    connectionString = "Data Source=localhost\\SQLEXPRESS; Initial Catalog=Project_EfCore; Connect Timeout=60; Encrypt=True; Integrated Security=True;Persist Security Info=False;Pooling=False; TrustServerCertificate=True";
-                }
+                    //connectionString = "Data Source=localhost\\SQLEXPRESS; Initial Catalog=Project_EfCore; Connect Timeout=60; Encrypt=True; Integrated Security=True;Persist Security Info=False;Pooling=False; TrustServerCertificate=True";
+                    connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Project_EfCore; Connect Timeout=60; Integrated Security=True;Persist Security Info=False;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;";
+
+				}
 
                 optionsBuilder.UseSqlServer(connectionString);
             }
@@ -98,12 +97,44 @@ namespace Project.Infrastructure.Data
             modelBuilder.Entity<User>()
                 .HasKey(u => u.Id);
 
-            modelBuilder.Entity<User>()
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasKey(t => t.Id);
+
+            modelBuilder.Entity<Photo>(e =>
+            {
+                e.HasKey(p => p.Id);
+                e.HasIndex(p => p.UploadedAt);
+			});
+
+			modelBuilder.Entity<PasswordResetToken>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(t => t.TokenHash)
+                .IsUnique();
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(t => t.UserId);
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .Property(t => t.TokenHash)
+                .HasMaxLength(1024);
+
+			modelBuilder.Entity<User>()
                 .HasOne(u => u.UserAccount)
                 .WithOne(a => a.User)
                 .HasForeignKey<UserAccount>(a => a.UserId);
 
-            modelBuilder.Entity<Product>()
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Photo)
+                .WithMany()
+                .HasForeignKey(u => u.PhotoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+			modelBuilder.Entity<Product>()
                 .HasOne(u => u.ProductPrice)
                 .WithOne(a => a.Product)
                 .HasForeignKey<ProductPrice>(a => a.ProductId);
@@ -113,15 +144,27 @@ namespace Project.Infrastructure.Data
                 .WithOne(a => a.Product)
                 .HasForeignKey<ProductStock>(a => a.ProductId);
 
-            // One Event has many Participants
-            modelBuilder.Entity<Event>()
+            modelBuilder.Entity<Product>()
+                .HasOne(u => u.Photo)
+                .WithMany()
+                .HasForeignKey(u => u.PhotoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+			// One Event has many Participants
+			modelBuilder.Entity<Event>()
                 .HasMany(e => e.Participants)
                 .WithOne(p => p.Event)
                 .HasForeignKey(p => p.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Each participant belongs to one User or One user can participate in many events
-            modelBuilder.Entity<EventParticipant>()
+            modelBuilder.Entity<Event>()
+                .HasOne(e => e.Photo)
+                .WithMany()
+                .HasForeignKey(e => e.PhotoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+			// Each participant belongs to one User or One user can participate in many events
+			modelBuilder.Entity<EventParticipant>()
                 .HasOne(ep => ep.User)
                 .WithMany()
                 .HasForeignKey(ep => ep.UserId)
@@ -195,6 +238,14 @@ namespace Project.Infrastructure.Data
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Transaction_ReversalAdmin");
 
+            // Redemption relationship (optional - only for Redeem type or RedemptionRefund source)
+            modelBuilder.Entity<Transaction>()
+                .HasOne(t => t.Redemption)
+                .WithMany()
+                .HasForeignKey(t => t.RedemptionId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Transaction_Redemption");
+
             // Transaction indexes
             modelBuilder.Entity<Transaction>()
                 .HasIndex(t => t.UserId);
@@ -207,6 +258,9 @@ namespace Project.Infrastructure.Data
 
             modelBuilder.Entity<Transaction>()
                 .HasIndex(t => new { t.UserId, t.TimeStamp });
+
+            modelBuilder.Entity<Transaction>()
+                .HasIndex(t => t.RedemptionId);
 
             // Redemption relationships - Approval admin
             modelBuilder.Entity<Redemption>()
@@ -236,6 +290,22 @@ namespace Project.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(r => r.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Redemption relationships - Deduction Transaction
+            modelBuilder.Entity<Redemption>()
+                .HasOne(r => r.DeductionTransaction)
+                .WithMany()
+                .HasForeignKey(r => r.DeductionTransactionId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Redemption_DeductionTransaction");
+
+            // Redemption relationships - Refund Transaction
+            modelBuilder.Entity<Redemption>()
+                .HasOne(r => r.RefundTransaction)
+                .WithMany()
+                .HasForeignKey(r => r.RefundTransactionId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Redemption_RefundTransaction");
 
             // Redemption indexes
             modelBuilder.Entity<Redemption>()

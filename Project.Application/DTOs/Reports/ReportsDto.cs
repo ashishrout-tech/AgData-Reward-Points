@@ -24,23 +24,25 @@ namespace Project.Application.DTOs.Reports
 
     public class RedemptionSummaryDto
     {
-        public int Pending { get; set; }
+        public int? Total { get; set; }
+		public int Pending { get; set; }
         public int Approved { get; set; }
         public int Rejected { get; set; }
-    }
+        public int? PointsUsed { get; set; }
+	}
 
     public class ActivityTimelineDto
     {
         public DateTime Date { get; set; }
-        public List<ActivityEventDto> Events { get; set; }
+        public List<ActivityTransactionDto> Transactions { get; set; }
     }
 
-    public class ActivityEventDto
+    public class ActivityTransactionDto
     {
         public string Type { get; set; }
         public string Description { get; set; }
         public int? Points { get; set; }
-        public DateTime TimeStamp { get; set; }
+        public TimeSpan TimeStamp { get; set; }
     }
 
     public class AdminDashboardDto
@@ -73,14 +75,16 @@ namespace Project.Application.DTOs.Reports
     public class TopEarnerDto
     {
         public Guid UserId { get; set; }
-        public string Name { get; set; }
+        public Guid? PhotoId { get; set; }
+		public string Name { get; set; }
         public int TotalPoints { get; set; }
     }
 
     public class TopRedemptionProductDto
     {
         public Guid ProductId { get; set; }
-        public string Name { get; set; }
+        public Guid? PhotoId { get; set; }
+		public string Name { get; set; }
         public int RedemptionCount { get; set; }
     }
 

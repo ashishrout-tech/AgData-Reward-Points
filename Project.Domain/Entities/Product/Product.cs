@@ -15,9 +15,11 @@ namespace Project.Domain.Entities.Product
         public DateTime CreatedAt { get; }
         public DateTime UpdatedAt { get; private set; }
         public bool IsActive { get; private set; }
-        public ProductPrice ProductPrice { get; private set; } = null!;
+        public Guid? PhotoId { get; private set; }
+		public ProductPrice ProductPrice { get; private set; } = null!;
         public ProductStock ProductStock { get; private set; } = null!;
-        private Product() {}
+        public Photo? Photo { get; private set; }
+		private Product() {}
         public Product(string name, string description, string brand)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -35,8 +37,15 @@ namespace Project.Domain.Entities.Product
             UpdatedAt = DateTime.UtcNow;
             IsActive = true;
         }
+        public void SetPhoto(Guid photoId)
+        {
+            if (photoId == Guid.Empty)
+                throw new ArgumentException("PhotoId cannot be empty.", nameof(photoId));
+            PhotoId = photoId;
+            UpdatedAt = DateTime.UtcNow;
+		}
 
-        public void SetPriceAndStock(ProductPrice price, ProductStock stock)
+		public void SetPriceAndStock(ProductPrice price, ProductStock stock)
         {
             if (price == null)
                 throw new ArgumentNullException(nameof(price));
@@ -69,7 +78,7 @@ namespace Project.Domain.Entities.Product
         public void Deactivate()
         {
             if (!IsActive)
-                throw new InvalidOperationException("Product is already deactivated.");
+                return;
 
             IsActive = false;
             UpdatedAt = DateTime.UtcNow;
@@ -78,7 +87,7 @@ namespace Project.Domain.Entities.Product
         public void Activate()
         {
             if (IsActive)
-                throw new InvalidOperationException("Product is already active.");
+                return;
 
             IsActive = true;
             UpdatedAt = DateTime.UtcNow;

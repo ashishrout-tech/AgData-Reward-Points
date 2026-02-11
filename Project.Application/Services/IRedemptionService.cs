@@ -9,8 +9,10 @@ namespace Project.Application.Services
     public interface IRedemptionService
     {
         Task<RedemptionDetailDto> CreateRedemptionAsync(Guid userId, CreateRedemptionRequest request, CancellationToken cancellationToken = default);
-        Task<List<RedemptionDto>> GetPendingRedemptionsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default);
-        Task<List<RedemptionDto>> GetUserRedemptionsAsync(Guid userId, int? status = null, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+        Task<List<RedemptionPendingDto>> GetPendingRedemptionsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+		Task<List<RedemptionApprovedDto>> GetApprovedRedemptionsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+		Task<List<RedemptionRejectedDto>> GetRejectedRedemptionsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+		Task<List<RedemptionDto>> GetUserRedemptionsAsync(Guid userId, int? status = null, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
         Task<RedemptionDetailDto> GetRedemptionAsync(Guid id, CancellationToken cancellationToken = default);
         Task<RedemptionApproveResponseDto> ApproveRedemptionAsync(Guid id, Guid adminId, CancellationToken cancellationToken = default);
         Task<RedemptionRejectResponseDto> RejectRedemptionAsync(Guid id, RejectRedemptionRequest request, Guid adminId, CancellationToken cancellationToken = default);

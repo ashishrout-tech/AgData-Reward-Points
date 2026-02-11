@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Project.Domain.Entities;
+using Project.Domain.Enums;
 using Project.Domain.Interfaces;
 using Project.Infrastructure.Data;
 using System;
@@ -134,7 +135,7 @@ namespace Project.Infrastructure.Repositories
         {
             return await _db.Transactions
                 .AsNoTracking()
-                .Where(t => t.UserId == userId && !t.IsReversed)
+                .Where(t => t.UserId == userId && !t.IsReversed && ((int)t.Source == 0 || (int)t.Source == 1))
                 .SumAsync(t => t.Points, cancellationToken);
         }
 
@@ -142,33 +143,52 @@ namespace Project.Infrastructure.Repositories
         {
             return await _db.Transactions
                 .AsNoTracking()
-                .Where(t => t.UserId == userId && (int)t.Source == 3 && !t.IsReversed) // Source 3 = Redeem
+                .Where(t => t.UserId == userId && (int)t.Type == 1 && !t.IsReversed)
                 .SumAsync(t => t.Points, cancellationToken);
         }
 
-        public async Task<List<Transaction>> GetRecentTransactionsAsync(int days = 7, int take = 100, CancellationToken cancellationToken = default)
+        public async Task<List<Transaction>> GetRecentTransactionsAsync(int? days, int take = 100, CancellationToken cancellationToken = default)
         {
-            var fromDate = DateTime.UtcNow.AddDays(-days);
-            return await _db.Transactions
-                .AsNoTracking()
-                .Include(t => t.User)
-                .Where(t => t.TimeStamp >= fromDate)
-                .OrderByDescending(t => t.TimeStamp)
-                .Take(take)
-                .ToListAsync(cancellationToken);
+            if(days == null)
+            {
+				return await _db.Transactions
+					.AsNoTracking()
+					.Include(t => t.User)
+					.OrderByDescending(t => t.TimeStamp)
+					.Take(take)
+					.ToListAsync(cancellationToken);
+
+			}
+            else
+            {
+				var fromDate = DateTime.UtcNow.AddDays(-days.Value);
+				return await _db.Transactions
+					.AsNoTracking()
+					.Include(t => t.User)
+					.Where(t => t.TimeStamp >= fromDate)
+					.OrderByDescending(t => t.TimeStamp)
+					.Take(take)
+					.ToListAsync(cancellationToken);
+			}
+            
         }
 
-        public async Task<List<(Guid UserId, string UserName, int TotalPoints)>> GetTopEarnersAsync(int take = 10, CancellationToken cancellationToken = default)
+        public async Task<List<(Guid UserId, Guid? PhotoId, string UserName, int TotalPoints)>> GetTopEarnersAsync(int take = 10, CancellationToken cancellationToken = default)
         {
-            return await _db.Transactions
-                .AsNoTracking()
-                .Include(t => t.User)
-                .Where(t => !t.IsReversed)
-                .GroupBy(t => new { t.UserId, t.User.Name })
-                .Select(g => new ValueTuple<Guid, string, int>(g.Key.UserId, g.Key.Name, g.Sum(t => t.Points)))
+            var transactions = await _db.Transactions
+				.AsNoTracking()
+				.Include(t => t.User)
+				.Where(t => !t.IsReversed
+					&& t.Type == TransactionType.Earn
+					&& ((int)t.Source == 0 || (int)t.Source == 1))
+                .ToListAsync(cancellationToken);
+
+            return transactions
+                .GroupBy(t => new { t.UserId, t.User.PhotoId, t.User.Name })
+                .Select(g => new ValueTuple<Guid, Guid?, string, int>(g.Key.UserId, g.Key.PhotoId, g.Key.Name, g.Sum(t => t.Points)))
                 .OrderByDescending(x => x.Item3)
                 .Take(take)
-                .ToListAsync(cancellationToken);
+                .ToList();
         }
     }
 }

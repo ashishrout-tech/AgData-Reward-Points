@@ -22,8 +22,9 @@ namespace Project.Application.Services
         Task<ProductStockDto> GetProductStockAsync(Guid productId, CancellationToken cancellationToken = default);
         Task<ProductStockDto> UpdateProductStockAsync(Guid productId, int quantity, CancellationToken cancellationToken = default);
         Task<ProductStockDto> DecreaseStockAsync(Guid productId, int quantity, CancellationToken cancellationToken = default);
+		Task<ProductStockDto> IncreaseStockAsync(Guid productId, int quantity, CancellationToken cancellationToken = default);
 
-        // Search operations
-        Task<List<ProductDto>> SearchProductsAsync(string? name, string? brand, CancellationToken cancellationToken = default);
+		// Search operations
+		Task<List<ProductDto>> SearchProductsAsync(string? name, string? brand, CancellationToken cancellationToken = default);
     }
 }

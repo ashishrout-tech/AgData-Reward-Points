@@ -29,7 +29,7 @@ namespace Project.API.Controllers
         private bool IsAdmin()
         {
             var roleClaim = User.FindFirst(ClaimTypes.Role);
-            return roleClaim?.Value == "Admin";
+            return roleClaim?.Value == "ADMIN";
         }
 
         /// <summary>
@@ -76,8 +76,8 @@ namespace Project.API.Controllers
         /// Get pending redemptions (Admin only)
         /// </summary>
         [HttpGet("pending")]
-        [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<List<RedemptionDto>>> GetPendingRedemptions(
+        [Authorize(Roles = "ADMIN")]
+        public async Task<ActionResult<List<RedemptionPendingDto>>> GetPendingRedemptions(
             [FromQuery] int skip = 0,
             [FromQuery] int take = 10,
             CancellationToken cancellationToken = default)
@@ -95,10 +95,56 @@ namespace Project.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get user redemption history
-        /// </summary>
-        [HttpGet("user/{userId}")]
+		/// <summary>
+		/// Get pending redemptions (Admin only)
+		/// </summary>
+		[HttpGet("approved")]
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<List<RedemptionApprovedDto>>> GetApprovedRedemptions(
+			[FromQuery] int skip = 0,
+			[FromQuery] int take = 10,
+			CancellationToken cancellationToken = default)
+		{
+			try
+			{
+				_logger.LogInformation("Getting pending redemptions");
+				var redemptions = await _redemptionService.GetApprovedRedemptionsAsync(skip, take, cancellationToken);
+				return Ok(redemptions);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError("Error retrieving pending redemptions: {Message}", ex.Message);
+				return StatusCode(500, new { message = "An error occurred while retrieving pending redemptions" });
+			}
+		}
+
+		/// <summary>
+		/// Get pending redemptions (Admin only)
+		/// </summary>
+		[HttpGet("rejected")]
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<List<RedemptionRejectedDto>>> GetRejectedRedemptions(
+			[FromQuery] int skip = 0,
+			[FromQuery] int take = 10,
+			CancellationToken cancellationToken = default)
+		{
+			try
+			{
+				_logger.LogInformation("Getting pending redemptions");
+				var redemptions = await _redemptionService.GetRejectedRedemptionsAsync(skip, take, cancellationToken);
+				return Ok(redemptions);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError("Error retrieving pending redemptions: {Message}", ex.Message);
+				return StatusCode(500, new { message = "An error occurred while retrieving pending redemptions" });
+			}
+		}
+
+		/// <summary>
+		/// Get user redemption history
+		/// </summary>
+		[HttpGet("user/{userId}")]
         public async Task<ActionResult<List<RedemptionDto>>> GetUserRedemptions(
             Guid userId,
             [FromQuery] int? status = null,
@@ -153,7 +199,7 @@ namespace Project.API.Controllers
         /// Approve redemption (Admin only)
         /// </summary>
         [HttpPost("{id}/approve")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<RedemptionApproveResponseDto>> ApproveRedemption(
             Guid id,
             CancellationToken cancellationToken)
@@ -186,7 +232,7 @@ namespace Project.API.Controllers
         /// Reject redemption (Admin only)
         /// </summary>
         [HttpPost("{id}/reject")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<RedemptionRejectResponseDto>> RejectRedemption(
             Guid id,
             [FromBody] RejectRedemptionRequest request,
@@ -223,7 +269,7 @@ namespace Project.API.Controllers
         /// Get redemptions by product (Admin only)
         /// </summary>
         [HttpGet("product/{productId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<List<RedemptionDto>>> GetRedemptionsByProduct(
             Guid productId,
             [FromQuery] int? status = null,
@@ -248,7 +294,7 @@ namespace Project.API.Controllers
         /// Get redemption statistics (Admin only)
         /// </summary>
         [HttpGet("statistics")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<RedemptionStatisticsDto>> GetStatistics(
             CancellationToken cancellationToken)
         {
@@ -269,7 +315,7 @@ namespace Project.API.Controllers
         /// Get rejected redemptions report (Admin only)
         /// </summary>
         [HttpGet("reports/rejected")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<List<RejectedRedemptionReportDto>>> GetRejectedRedemptionsReport(
             [FromQuery] string? reason = null,
             [FromQuery] int skip = 0,

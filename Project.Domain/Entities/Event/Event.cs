@@ -9,24 +9,40 @@ namespace Project.Domain.Entities.Event
     public class Event
     {
         public Guid Id {  get; private set; }
-        public Guid EventMetadataId { get; private set; }
-        public Guid EventScheduleId { get; private set; }
         public string Title { get; private set; } = null!;
-        public bool IsCancelled { get; private set; }
+        public string Description { get; private set; } = null!;
+		public bool IsCancelled { get; private set; }
+        public Guid? PhotoId { get; private set; }
         public ICollection<EventParticipant> Participants { get; private set; } = new List<EventParticipant>();
         public EventMetadata EventMetadata { get; private set; } = null!;
         public EventSchedule EventSchedule { get; private set; } = null!;
-        private Event() { }
+        public Photo? Photo { get; private set; }
+		private Event() { }
 
         public Event(string title, string description, EventMetadata metadata, EventSchedule schedule)
         {
             Id = Guid.NewGuid();
             Title = title;
-            EventMetadata = metadata;
+            Description = description;
+			EventMetadata = metadata;
             EventSchedule = schedule;
         }
 
-        public void SetMetadata(EventMetadata metadata)
+        public void SetTitle(string title)
+        {
+            Title = title;
+		}
+        public void SetDescription(string description)
+        {
+            Description = description;
+		}
+        public void SetPhoto(Guid PhotoId)
+        {
+            if(PhotoId == Guid.Empty)
+                throw new ArgumentException("PhotoId cannot be empty.", nameof(PhotoId));
+            this.PhotoId = PhotoId;
+		}
+		public void SetMetadata(EventMetadata metadata)
         {
             EventMetadata = metadata;
         }

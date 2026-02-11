@@ -90,7 +90,7 @@ namespace Project
 
             using var context = new AppDbContext(options);
 
-            await Practice(context);
+            //await Practice(context);
 
             var teams = context.Users.ToList();
 

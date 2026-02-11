@@ -6,7 +6,8 @@ namespace Project.Application.DTOs.User
     public class UserDto
     {
         public Guid Id { get; set; }
-        public string Name { get; set; } = null!;
+        public Guid? PhotoId { get; set; }
+		public string Name { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string EmployeeId { get; set; } = null!;
         public UserRole Role { get; set; }

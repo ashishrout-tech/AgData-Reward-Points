@@ -9,7 +9,8 @@ namespace Project.Application.DTOs.Product
         public decimal PointsPrice { get; set; }
         public int AvailableStock { get; set; }
         public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public Guid? PhotoId { get; set; }
+		public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
 
@@ -22,6 +23,7 @@ namespace Project.Application.DTOs.Product
         public ProductPriceDto Price { get; set; } = null!;
         public ProductStockDto Stock { get; set; } = null!;
         public bool IsActive { get; set; }
+        public Guid? PhotoId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

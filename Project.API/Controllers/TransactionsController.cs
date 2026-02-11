@@ -29,14 +29,14 @@ namespace Project.API.Controllers
         private bool IsAdmin()
         {
             var roleClaim = User.FindFirst(ClaimTypes.Role);
-            return roleClaim?.Value == "Admin";
+            return roleClaim?.Value == "ADMIN";
         }
 
         /// <summary>
         /// Record event-based point earning (Admin only)
         /// </summary>
         [HttpPost("event-earning")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<TransactionDto>> RecordEventEarning(
             [FromBody] RecordEventEarningRequest request,
             CancellationToken cancellationToken)
@@ -67,7 +67,7 @@ namespace Project.API.Controllers
         /// Award points by admin (Admin only)
         /// </summary>
         [HttpPost("admin-award")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<TransactionDto>> AwardPoints(
             [FromBody] AwardPointsRequest request,
             CancellationToken cancellationToken)
@@ -152,7 +152,7 @@ namespace Project.API.Controllers
         /// Reverse transaction (Admin only)
         /// </summary>
         [HttpPost("{id}/reverse")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<TransactionDetailDto>> ReverseTransaction(
             Guid id,
             [FromBody] ReverseTransactionRequest request,
@@ -189,7 +189,7 @@ namespace Project.API.Controllers
         /// Get event earnings report (Admin only)
         /// </summary>
         [HttpGet("reports/event/{eventId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<EventEarningsReportDto>> GetEventEarningsReport(
             Guid eventId,
             [FromQuery] int skip = 0,
@@ -269,7 +269,7 @@ namespace Project.API.Controllers
         /// Get reversed transactions report (Admin only)
         /// </summary>
         [HttpGet("reports/reversed")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<List<ReversedTransactionReportDto>>> GetReversedTransactionsReport(
             [FromQuery] Guid? userId = null,
             [FromQuery] int skip = 0,

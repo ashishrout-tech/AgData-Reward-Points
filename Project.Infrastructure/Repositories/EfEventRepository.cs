@@ -26,12 +26,18 @@ namespace Project.Infrastructure.Repositories
             return eventEntity;
         }
 
-        public async Task<Event?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task<Event?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default, Boolean? track = true)
         {
-            return await _db.Events
-                .AsNoTracking()
+            var eventQuery = _db.Events.AsQueryable();
+            if(track.HasValue && !track.Value)
+            {
+                eventQuery = eventQuery.AsNoTracking();
+			}
+			return await eventQuery
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                    .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
         }
 
@@ -40,7 +46,9 @@ namespace Project.Infrastructure.Repositories
             return await _db.Events
                 .AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                    .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => !e.IsCancelled)
                 .OrderBy(e => e.EventSchedule.StartTime)
                 .ToListAsync(cancellationToken);
@@ -51,7 +59,9 @@ namespace Project.Infrastructure.Repositories
             return await _db.Events
                 .AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                    .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => !e.IsCancelled)
                 .OrderBy(e => e.EventSchedule.StartTime)
                 .Skip(skip)
@@ -61,15 +71,8 @@ namespace Project.Infrastructure.Repositories
 
         public async Task UpdateAsync(Event eventEntity, CancellationToken cancellationToken = default)
         {
-            var existing = await _db.Events
-                .FirstOrDefaultAsync(e => e.Id == eventEntity.Id, cancellationToken);
-
-            if (existing == null)
-                throw new KeyNotFoundException("Event not found.");
-
-            _db.Entry(existing).CurrentValues.SetValues(eventEntity);
-            await _db.SaveChangesAsync(cancellationToken);
-        }
+			await _db.SaveChangesAsync(cancellationToken);
+		}
 
         public async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
         {
@@ -85,13 +88,15 @@ namespace Project.Infrastructure.Repositories
         {
             var query = _db.Events.AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                    .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => !e.IsCancelled);
 
             if (!string.IsNullOrWhiteSpace(title))
             {
-                query = query.Where(e => e.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
-            }
+				query = query.Where(e => EF.Functions.Like(e.Title, $"%{title}%"));
+			}
 
             if (organizerId.HasValue && organizerId != Guid.Empty)
             {
@@ -122,17 +127,19 @@ namespace Project.Infrastructure.Repositories
         {
             var query = _db.Events.AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                    .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => !e.IsCancelled);
 
             if (!string.IsNullOrWhiteSpace(title))
             {
-                query = query.Where(e => e.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
-            }
+				query = query.Where(e => EF.Functions.Like(e.Title, $"%{title}%"));
+			}
 
             if (organizerId.HasValue && organizerId != Guid.Empty)
             {
-                query = query.Where(e => e.EventMetadata.OrganizerId == organizerId);
+                query = query.Where(e => EF.Functions.Like(e.Title, $"%{title}%"));
             }
 
             if (!string.IsNullOrWhiteSpace(tag))
@@ -162,7 +169,9 @@ namespace Project.Infrastructure.Repositories
             return await _db.Events
                 .AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                    .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => e.EventMetadata.OrganizerId == organizerId && !e.IsCancelled)
                 .OrderBy(e => e.EventSchedule.StartTime)
                 .ToListAsync(cancellationToken);
@@ -173,7 +182,9 @@ namespace Project.Infrastructure.Repositories
             return await _db.Events
                 .AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => e.EventMetadata.OrganizerId == organizerId && !e.IsCancelled)
                 .OrderBy(e => e.EventSchedule.StartTime)
                 .Skip(skip)
@@ -188,21 +199,24 @@ namespace Project.Infrastructure.Repositories
             return await _db.Events
                 .AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => e.EventSchedule.StartTime >= fromDate && e.EventSchedule.StartTime <= toDate && !e.IsCancelled)
                 .OrderBy(e => e.EventSchedule.StartTime)
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<Event>> GetUpcomingAsync(DateTime fromDate, int daysAhead, int skip, int take, CancellationToken cancellationToken = default)
+        public async Task<List<Event>> GetUpcomingAsync(DateTime fromDate, int skip, int take, CancellationToken cancellationToken = default)
         {
-            var toDate = fromDate.AddDays(daysAhead);
 
             return await _db.Events
                 .AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
-                .Where(e => e.EventSchedule.StartTime >= fromDate && e.EventSchedule.StartTime <= toDate && !e.IsCancelled)
+                .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
+                .Where(e => e.EventSchedule.EndTime >= fromDate && !e.IsCancelled)
                 .OrderBy(e => e.EventSchedule.StartTime)
                 .Skip(skip)
                 .Take(take)
@@ -213,7 +227,9 @@ namespace Project.Infrastructure.Repositories
         {
             var query = _db.Events.AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => e.Participants.Any(p => p.UserId == userId) && !e.IsCancelled);
 
             if (!includeHistory)
@@ -235,7 +251,9 @@ namespace Project.Infrastructure.Repositories
         {
             var query = _db.Events.AsNoTracking()
                 .Include(e => e.EventMetadata)
-                .Include(e => e.Participants)
+                .ThenInclude(em => em.Organizer)
+                .Include(e => e.EventSchedule)
+				.Include(e => e.Participants)
                 .Where(e => e.Participants.Any(p => p.UserId == userId) && !e.IsCancelled);
 
             if (!includeHistory)
@@ -252,6 +270,7 @@ namespace Project.Infrastructure.Repositories
             {
                 // History - past events
                 return await query
+                    .Where(e => DateTime.UtcNow > e.EventSchedule.EndTime)
                     .OrderByDescending(e => e.EventSchedule.EndTime)
                     .Skip(skip)
                     .Take(take)
@@ -262,9 +281,11 @@ namespace Project.Infrastructure.Repositories
         public async Task<List<EventParticipant>> GetEventParticipantsAsync(Guid eventId, int? role = null, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
         {
             var query = _db.EventParticipants.AsNoTracking()
-                .Where(p => p.EventId == eventId);
+                .Include(p => p.User)
+				.Where(p => p.EventId == eventId);
 
-            if (role.HasValue)
+
+			if (role.HasValue)
             {
                 query = query.Where(p => (int)p.Role == role.Value);
             }
@@ -279,7 +300,40 @@ namespace Project.Infrastructure.Repositories
         public async Task<EventParticipant?> GetParticipantAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default)
         {
             return await _db.EventParticipants.AsNoTracking()
-                .FirstOrDefaultAsync(p => p.EventId == eventId && p.UserId == userId, cancellationToken);
+                .Include(p => p.User)
+				.FirstOrDefaultAsync(p => p.EventId == eventId && p.UserId == userId, cancellationToken);
         }
-    }
+
+		public async Task<EventParticipant> AddParticipantAsync(EventParticipant participant, CancellationToken cancellationToken = default)
+		{
+			await _db.EventParticipants.AddAsync(participant, cancellationToken);
+			await _db.SaveChangesAsync();
+
+			await _db.Entry(participant).Reference(p => p.User).LoadAsync(cancellationToken);
+			return participant;
+		}
+
+        public async Task<bool> RemoveParticipantAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default)
+        {
+            var participant = await _db.EventParticipants
+                .FirstOrDefaultAsync(p => p.EventId == eventId && p.UserId == userId, cancellationToken);
+            if (participant == null)
+                return false;
+            _db.EventParticipants.Remove(participant);
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+		}
+
+        public async Task<EventParticipant> UpdateParticipantAsync(EventParticipant participant, CancellationToken cancellationToken = default)
+        {
+            var existing = await _db.EventParticipants
+                .FirstOrDefaultAsync(p => p.EventId == participant.EventId && p.UserId == participant.UserId, cancellationToken);
+            if (existing == null)
+                throw new KeyNotFoundException("Participant not found.");
+            _db.Entry(existing).CurrentValues.SetValues(participant);
+            await _db.SaveChangesAsync(cancellationToken);
+            await _db.Entry(existing).Reference(p => p.User).LoadAsync(cancellationToken);
+            return existing;
+		}
+	}
 }

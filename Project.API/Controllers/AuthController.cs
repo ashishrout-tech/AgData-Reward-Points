@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using Project.Application.DTOs.User;
 using Project.Application.Services;
+using Project.Application.DTOs.Auth;
 
 namespace Project.API.Controllers
 {
@@ -45,5 +48,67 @@ namespace Project.API.Controllers
                 return StatusCode(500, new { message = "An error occurred during login" });
             }
         }
+
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PasswordResetResponse>> SendPasswordResetMail(
+            [FromBody] ForgotPasswordRequest request,
+			CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await _authService.SendPasswordResetMailAsync(request.Email, cancellationToken);
+                return Ok(new PasswordResetResponse
+                {
+                    Success = true,
+					Message = "If an account exists with this email, a reset link has been sent"
+				});
+			}
+            catch (Exception ex)
+            {
+                _logger.LogError("Error sending password reset mail: {Message}", ex.Message);
+                return Ok(new PasswordResetResponse
+                {
+                    Success = true,
+                    Message = "If an account exists with this email, a reset link has been sent"
+                });
+			}
+		}
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+		public async Task<ActionResult<PasswordResetResponse>> ResetPassword(
+            [FromQuery] string token,
+            [FromBody] PasswordResetRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await _authService.ResetPasswordAsync(token, request.NewPassword, cancellationToken);
+                return Ok(new PasswordResetResponse
+                {
+                    Success = true,
+                    Message = "Password has been reset successfully"
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("Invalid password reset token: {Message}", ex.Message);
+                return Unauthorized(new PasswordResetResponse
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error resetting password: {Message}", ex.Message);
+                return StatusCode(500, new PasswordResetResponse
+                {
+                    Success = false,
+                    Message = "An error occurred while resetting the password"
+                });
+			}
+		}
     }
 }

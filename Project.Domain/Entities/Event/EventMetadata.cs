@@ -17,9 +17,9 @@ namespace Project.Domain.Entities.Event
         public List<string> Tags { get; private set; } = new();
         public EventMetadata() { }
 
-        public EventMetadata(User organizer)
+        public EventMetadata(Guid organizerId)
         {
-            Organizer = organizer;
+            OrganizerId = organizerId;
         }
 
         public void AddTag(string tag)

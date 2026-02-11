@@ -57,13 +57,26 @@ namespace Project.Infrastructure.Repositories
         public async Task UpdateAsync(Product product, CancellationToken cancellationToken = default)
         {
             var existing = await _db.Products
-                .FirstOrDefaultAsync(p => p.Id == product.Id, cancellationToken);
+                .Include(p => p.ProductPrice)
+                .Include(p => p.ProductStock)
+				.FirstOrDefaultAsync(p => p.Id == product.Id, cancellationToken);
 
             if (existing == null)
                 throw new KeyNotFoundException("Product not found.");
 
             _db.Entry(existing).CurrentValues.SetValues(product);
-            await _db.SaveChangesAsync(cancellationToken);
+
+			if (product.ProductPrice != null && existing.ProductPrice != null)
+			{
+				_db.Entry(existing.ProductPrice).CurrentValues.SetValues(product.ProductPrice);
+			}
+
+			if (product.ProductStock != null && existing.ProductStock != null)
+			{
+				_db.Entry(existing.ProductStock).CurrentValues.SetValues(product.ProductStock);
+			}
+
+			await _db.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<List<Product>> SearchAsync(string? name, string? brand, CancellationToken cancellationToken = default)
@@ -74,12 +87,12 @@ namespace Project.Infrastructure.Repositories
 
             if (!string.IsNullOrWhiteSpace(name))
             {
-                query = query.Where(p => p.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(p => EF.Functions.Like(p.Name, $"%{name}%"));
             }
 
             if (!string.IsNullOrWhiteSpace(brand))
             {
-                query = query.Where(p => p.Brand.Contains(brand, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(p => EF.Functions.Like(p.Brand, $"%{brand}%"));
             }
 
             return await query

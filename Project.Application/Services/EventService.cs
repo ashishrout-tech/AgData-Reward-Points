@@ -45,7 +45,7 @@ namespace Project.Application.Services
 
                 var eventEntity = new Event(request.Title, request.Description, null!, null!);
                 
-                var metadata = new EventMetadata(organizer);
+                var metadata = new EventMetadata(organizer.Id);
                 
                 if (request.Tags?.Any() == true)
                 {
@@ -60,10 +60,15 @@ namespace Project.Application.Services
                 eventEntity.SetMetadata(metadata);
                 eventEntity.SetSchedule(schedule);
 
-                var organizerParticipant = new EventParticipant(eventEntity.Id, userId, ParticipantRole.Organizer);
-                eventEntity.Participants.Add(organizerParticipant);
+                if(request.PhotoId != null)
+                {
+                    eventEntity.SetPhoto(request.PhotoId.Value);
+                }
 
-                var createdEvent = await _eventRepository.AddAsync(eventEntity, cancellationToken);
+                var organizerParticipant = new EventParticipant(eventEntity.Id, userId, ParticipantRole.Organizer);
+                eventEntity.AddParticipant(organizerParticipant);
+
+				var createdEvent = await _eventRepository.AddAsync(eventEntity, cancellationToken);
 
                 _logger.LogInformation("Event created successfully: {EventId}", createdEvent.Id);
 
@@ -89,13 +94,13 @@ namespace Project.Application.Services
             return MapToEventDetailDto(eventEntity);
         }
 
-        public async Task<List<EventDto>> GetAllEventsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default)
+        public async Task<List<EventDetailDto>> GetAllEventsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting all events - Skip: {Skip}, Take: {Take}", skip, take);
 
             var events = await _eventRepository.GetAllAsync(skip, take, cancellationToken);
 
-            return _mapper.Map<List<EventDto>>(events);
+            return MapToEventDetailListDto(events);
         }
 
         public async Task<EventDetailDto> UpdateEventAsync(Guid id, UpdateEventRequest request, CancellationToken cancellationToken = default)
@@ -115,13 +120,28 @@ namespace Project.Application.Services
                     throw new InvalidOperationException("Cannot update a cancelled event.");
                 }
 
-                if (request.StartTime.HasValue && request.EndTime.HasValue)
+                if(request.Title != null)
+                {
+                    eventEntity.SetTitle(request.Title);
+                }
+
+                if(request.Description != null)
+                {
+                    eventEntity.SetDescription(request.Description);
+				}
+
+				if (request.StartTime.HasValue && request.EndTime.HasValue)
                 {
                     if (request.StartTime >= request.EndTime)
                     {
                         throw new ArgumentException("Start time must be before end time.");
                     }
                     eventEntity.EventSchedule.Reschedule(request.StartTime.Value, request.EndTime.Value);
+                }
+
+                if(request.PhotoId.HasValue)
+                {
+                    eventEntity.SetPhoto(request.PhotoId.Value);
                 }
 
                 await _eventRepository.UpdateAsync(eventEntity, cancellationToken);
@@ -231,7 +251,13 @@ namespace Project.Application.Services
                     throw new InvalidOperationException("Cannot add participants to a cancelled event.");
                 }
 
-                var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+				var existingParticipant = await _eventRepository.GetParticipantAsync(eventId, request.UserId, cancellationToken);
+				if (existingParticipant != null)
+				{
+					throw new InvalidOperationException($"User is already a participant in this event.");
+				}
+
+				var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
                 if (user == null)
                 {
                     throw new KeyNotFoundException($"User with ID '{request.UserId}' not found");
@@ -240,10 +266,9 @@ namespace Project.Application.Services
                 var role = (ParticipantRole)request.Role;
                 var participant = new EventParticipant(eventId, request.UserId, role);
 
-                eventEntity.AddParticipant(participant);
-                await _eventRepository.UpdateAsync(eventEntity, cancellationToken);
+                await _eventRepository.AddParticipantAsync(participant, cancellationToken);
 
-                _logger.LogInformation("Participant added successfully: {EventId}, {UserId}", eventId, request.UserId);
+				_logger.LogInformation("Participant added successfully: {EventId}, {UserId}", eventId, request.UserId);
 
                 return _mapper.Map<EventParticipantDto>(participant);
             }
@@ -260,16 +285,18 @@ namespace Project.Application.Services
             {
                 _logger.LogInformation("Removing participant from event: {EventId}, UserId: {UserId}", eventId, userId);
 
-                var eventEntity = await _eventRepository.GetByIdAsync(eventId, cancellationToken);
-                if (eventEntity == null)
+                var eventEntity = await _eventRepository.GetByIdAsync(eventId, cancellationToken, false);
+                if (eventEntity?.EventSchedule.EndTime <= DateTime.UtcNow)
                 {
-                    throw new KeyNotFoundException($"Event with ID '{eventId}' not found");
+                    throw new InvalidOperationException("Cannot remove participant from an event that has already ended.");
                 }
 
-                eventEntity.RemoveParticipant(userId);
-                await _eventRepository.UpdateAsync(eventEntity, cancellationToken);
-
-                _logger.LogInformation("Participant removed successfully: {EventId}, {UserId}", eventId, userId);
+				var result = await _eventRepository.RemoveParticipantAsync(eventId, userId, cancellationToken);
+                if(!result)
+                {
+                    throw new KeyNotFoundException($"Participant not found in event");
+				}
+				_logger.LogInformation("Participant removed successfully: {EventId}, {UserId}", eventId, userId);
             }
             catch (Exception ex)
             {
@@ -284,24 +311,16 @@ namespace Project.Application.Services
             {
                 _logger.LogInformation("Updating participant role: {EventId}, UserId: {UserId}, Role: {Role}", eventId, userId, request.Role);
 
-                var eventEntity = await _eventRepository.GetByIdAsync(eventId, cancellationToken);
-                if (eventEntity == null)
-                {
-                    throw new KeyNotFoundException($"Event with ID '{eventId}' not found");
-                }
-
-                var participant = eventEntity.Participants.FirstOrDefault(p => p.UserId == userId);
-                if (participant == null)
+                var participant = await _eventRepository.GetParticipantAsync(eventId, userId, cancellationToken);
+                if(participant == null)
                 {
                     throw new KeyNotFoundException($"Participant not found in event");
                 }
+                var newRole = (ParticipantRole)request.Role;
+                participant.UpdateRole(newRole);
+                await _eventRepository.UpdateParticipantAsync(participant, cancellationToken);
 
-                var role = (ParticipantRole)request.Role;
-                participant.UpdateRole(role);
-                
-                await _eventRepository.UpdateAsync(eventEntity, cancellationToken);
-
-                _logger.LogInformation("Participant role updated successfully: {EventId}, {UserId}", eventId, userId);
+				_logger.LogInformation("Participant role updated successfully: {EventId}, {UserId}", eventId, userId);
 
                 return _mapper.Map<EventParticipantDto>(participant);
             }
@@ -318,22 +337,15 @@ namespace Project.Application.Services
             {
                 _logger.LogInformation("Assigning rank to participant: {EventId}, UserId: {UserId}, Rank: {Rank}", eventId, userId, request.Rank);
 
-                var eventEntity = await _eventRepository.GetByIdAsync(eventId, cancellationToken);
-                if (eventEntity == null)
-                {
-                    throw new KeyNotFoundException($"Event with ID '{eventId}' not found");
-                }
-
-                var participant = eventEntity.Participants.FirstOrDefault(p => p.UserId == userId);
+                var participant = await _eventRepository.GetParticipantAsync(eventId, userId, cancellationToken);
                 if (participant == null)
                 {
                     throw new KeyNotFoundException($"Participant not found in event");
-                }
-
+				}
                 participant.AssignRank(request.Rank);
-                await _eventRepository.UpdateAsync(eventEntity, cancellationToken);
+                await _eventRepository.UpdateParticipantAsync(participant, cancellationToken);
 
-                _logger.LogInformation("Rank assigned successfully: {EventId}, UserId: {UserId}, Rank: {Rank}", eventId, userId, request.Rank);
+				_logger.LogInformation("Rank assigned successfully: {EventId}, UserId: {UserId}, Rank: {Rank}", eventId, userId, request.Rank);
 
                 return _mapper.Map<EventParticipantDto>(participant);
             }
@@ -348,46 +360,40 @@ namespace Project.Application.Services
         {
             _logger.LogInformation("Getting participant details: {EventId}, UserId: {UserId}", eventId, userId);
 
-            var eventEntity = await _eventRepository.GetByIdAsync(eventId, cancellationToken);
-            if (eventEntity == null)
+            var participant = await _eventRepository.GetParticipantAsync(eventId, userId, cancellationToken);
+			if (participant == null)
             {
-                throw new KeyNotFoundException($"Event with ID '{eventId}' not found");
-            }
-
-            var participant = eventEntity.Participants.FirstOrDefault(p => p.UserId == userId);
-            if (participant == null)
-            {
-                throw new KeyNotFoundException($"Participant not found in event");
+                throw new KeyNotFoundException($"Participant for this Event: '{eventId}' not found");
             }
 
             return _mapper.Map<EventParticipantDetailDto>(participant);
         }
 
-        public async Task<List<EventDto>> SearchEventsAsync(string? title, Guid? organizerId, string? tag, DateTime? startDateFrom, DateTime? startDateTo, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
+        public async Task<List<EventDetailDto>> SearchEventsAsync(string? title, Guid? organizerId, string? tag, DateTime? startDateFrom, DateTime? startDateTo, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Searching events - Title: {Title}, OrganizerId: {OrganizerId}, Tag: {Tag}", title, organizerId, tag);
 
             var events = await _eventRepository.SearchAsync(title, organizerId, tag, startDateFrom, startDateTo, skip, take, cancellationToken);
 
-            return _mapper.Map<List<EventDto>>(events);
+            return MapToEventDetailListDto(events);
         }
 
-        public async Task<List<EventDto>> GetEventsByOrganizerAsync(Guid organizerId, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
+        public async Task<List<EventDetailDto>> GetEventsByOrganizerAsync(Guid organizerId, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Getting events by organizer: {OrganizerId}", organizerId);
 
             var events = await _eventRepository.GetByOrganizerAsync(organizerId, skip, take, cancellationToken);
 
-            return _mapper.Map<List<EventDto>>(events);
+            return MapToEventDetailListDto(events);
         }
 
-        public async Task<List<EventDto>> GetUpcomingEventsAsync(int daysAhead = 30, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
+        public async Task<List<EventDetailDto>> GetUpcomingEventsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Getting upcoming events - DaysAhead: {DaysAhead}", daysAhead);
+            _logger.LogInformation("Getting upcoming events");
 
-            var events = await _eventRepository.GetUpcomingAsync(DateTime.UtcNow, daysAhead, skip, take, cancellationToken);
+            var events = await _eventRepository.GetUpcomingAsync(DateTime.UtcNow, skip, take, cancellationToken);
 
-            return _mapper.Map<List<EventDto>>(events);
+            return MapToEventDetailListDto(events);
         }
 
         public async Task<List<string>> AddTagAsync(Guid id, AddTagRequest request, CancellationToken cancellationToken = default)
@@ -464,8 +470,10 @@ namespace Project.Application.Services
             return new EventStatisticsDto
             {
                 EventId = id,
-                TotalParticipants = eventEntity.Participants.Count,
-                OrgainzersCount = organizersCount,
+                PhotoId = eventEntity.PhotoId,
+				EventTitle = eventEntity.Title,
+				TotalParticipants = eventEntity.Participants.Count,
+                OrganizersCount = organizersCount,
                 SpeakersCount = speakersCount,
                 AttendeesCount = attendeesCount,
                 DurationInMinutes = eventEntity.EventSchedule.DurationInMinutes(),
@@ -509,8 +517,9 @@ namespace Project.Application.Services
             return new EventDetailDto
             {
                 Id = eventEntity.Id,
-                Title = eventEntity.Title,
-                Description = "N/A",
+                PhotoId = eventEntity.PhotoId,
+				Title = eventEntity.Title,
+                Description = eventEntity.Description,
                 StartTime = eventEntity.EventSchedule.StartTime,
                 EndTime = eventEntity.EventSchedule.EndTime,
                 DurationInMinutes = duration,
@@ -523,5 +532,15 @@ namespace Project.Application.Services
                 UpdatedAt = DateTime.UtcNow
             };
         }
-    }
+
+		private List<EventDetailDto> MapToEventDetailListDto(List<Event> eventsEntity)
+		{
+            var eventDetails = new List<EventDetailDto>();
+            foreach (var eventEntity in eventsEntity)
+            {
+                eventDetails.Add(MapToEventDetailDto(eventEntity));
+			}
+            return eventDetails;
+		}
+	}
 }

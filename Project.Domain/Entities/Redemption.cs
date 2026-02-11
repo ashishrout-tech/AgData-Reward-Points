@@ -29,11 +29,17 @@ namespace Project.Domain.Entities
         public DateTime? RejectedOn { get; private set; }
         public string? RejectionReason { get; private set; }
 
+        // Transaction tracking
+        public Guid? DeductionTransactionId { get; private set; }
+        public Guid? RefundTransactionId { get; private set; }
+
         // Navigation properties
         public User User { get; private set; } = null!;
         public ProductEntity Product { get; private set; } = null!;
         public User? ApprovalAdmin { get; private set; }
         public User? RejectionAdmin { get; private set; }
+        public Transaction? DeductionTransaction { get; private set; }
+        public Transaction? RefundTransaction { get; private set; }
 
         private Redemption() { }
 
@@ -76,6 +82,26 @@ namespace Project.Domain.Entities
             RejectedBy = rejectedBy;
             RejectedOn = DateTime.UtcNow;
             RejectionReason = reason;
+        }
+
+        public void LinkDeductionTransaction(Guid transactionId)
+        {
+            if (Status != RedemptionStatus.Approved)
+                throw new InvalidOperationException("Can only link deduction transaction to approved redemption.");
+            if (transactionId == Guid.Empty)
+                throw new ArgumentException("TransactionId cannot be empty.", nameof(transactionId));
+            
+            DeductionTransactionId = transactionId;
+        }
+
+        public void LinkRefundTransaction(Guid transactionId)
+        {
+            if (Status != RedemptionStatus.Rejected)
+                throw new InvalidOperationException("Can only link refund transaction to rejected redemption.");
+            if (transactionId == Guid.Empty)
+                throw new ArgumentException("TransactionId cannot be empty.", nameof(transactionId));
+            
+            RefundTransactionId = transactionId;
         }
     }
 }

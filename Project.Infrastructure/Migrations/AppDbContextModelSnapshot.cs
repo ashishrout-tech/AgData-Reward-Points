@@ -22,26 +22,66 @@ namespace Project.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Project.Domain.Entities.Auth.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
             modelBuilder.Entity("Project.Domain.Entities.Event.Event", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("EventMetadataId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("EventScheduleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("bit");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PhotoId");
 
                     b.ToTable("Events");
                 });
@@ -129,6 +169,43 @@ namespace Project.Infrastructure.Migrations
                     b.ToTable("EventSchedules");
                 });
 
+            modelBuilder.Entity("Project.Domain.Entities.Photo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("CheckSum")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("Thumbnail")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploadedAt");
+
+                    b.ToTable("Photos");
+                });
+
             modelBuilder.Entity("Project.Domain.Entities.Product.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -150,10 +227,15 @@ namespace Project.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PhotoId");
 
                     b.ToTable("Products");
                 });
@@ -202,7 +284,13 @@ namespace Project.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("DeductionTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RefundTransactionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("RejectedBy")
@@ -226,7 +314,11 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("CreatedAt");
 
+                    b.HasIndex("DeductionTransactionId");
+
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("RefundTransactionId");
 
                     b.HasIndex("RejectedBy");
 
@@ -267,6 +359,9 @@ namespace Project.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("RedemptionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ReversalReason")
                         .HasColumnType("nvarchar(max)");
 
@@ -295,6 +390,8 @@ namespace Project.Infrastructure.Migrations
                     b.HasIndex("EventId");
 
                     b.HasIndex("EventParticipantId");
+
+                    b.HasIndex("RedemptionId");
 
                     b.HasIndex("ReversedBy");
 
@@ -332,10 +429,15 @@ namespace Project.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Role")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PhotoId");
 
                     b.ToTable("Users");
                 });
@@ -358,6 +460,27 @@ namespace Project.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("UserAccounts");
+                });
+
+            modelBuilder.Entity("Project.Domain.Entities.Auth.PasswordResetToken", b =>
+                {
+                    b.HasOne("Project.Domain.Entities.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Project.Domain.Entities.Event.Event", b =>
+                {
+                    b.HasOne("Project.Domain.Entities.Photo", "Photo")
+                        .WithMany()
+                        .HasForeignKey("PhotoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Photo");
                 });
 
             modelBuilder.Entity("Project.Domain.Entities.Event.EventMetadata", b =>
@@ -409,6 +532,16 @@ namespace Project.Infrastructure.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("Project.Domain.Entities.Product.Product", b =>
+                {
+                    b.HasOne("Project.Domain.Entities.Photo", "Photo")
+                        .WithMany()
+                        .HasForeignKey("PhotoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Photo");
+                });
+
             modelBuilder.Entity("Project.Domain.Entities.Product.ProductPrice", b =>
                 {
                     b.HasOne("Project.Domain.Entities.Product.Product", "Product")
@@ -439,11 +572,23 @@ namespace Project.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_Redemption_ApprovalAdmin");
 
+                    b.HasOne("Project.Domain.Entities.Transaction", "DeductionTransaction")
+                        .WithMany()
+                        .HasForeignKey("DeductionTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Redemption_DeductionTransaction");
+
                     b.HasOne("Project.Domain.Entities.Product.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Project.Domain.Entities.Transaction", "RefundTransaction")
+                        .WithMany()
+                        .HasForeignKey("RefundTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Redemption_RefundTransaction");
 
                     b.HasOne("Project.Domain.Entities.Users.User", "RejectionAdmin")
                         .WithMany()
@@ -459,7 +604,11 @@ namespace Project.Infrastructure.Migrations
 
                     b.Navigation("ApprovalAdmin");
 
+                    b.Navigation("DeductionTransaction");
+
                     b.Navigation("Product");
+
+                    b.Navigation("RefundTransaction");
 
                     b.Navigation("RejectionAdmin");
 
@@ -484,6 +633,12 @@ namespace Project.Infrastructure.Migrations
                         .HasForeignKey("EventParticipantId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Project.Domain.Entities.Redemption", "Redemption")
+                        .WithMany()
+                        .HasForeignKey("RedemptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Transaction_Redemption");
+
                     b.HasOne("Project.Domain.Entities.Users.User", "ReversalAdmin")
                         .WithMany()
                         .HasForeignKey("ReversedBy")
@@ -502,9 +657,21 @@ namespace Project.Infrastructure.Migrations
 
                     b.Navigation("EventParticipant");
 
+                    b.Navigation("Redemption");
+
                     b.Navigation("ReversalAdmin");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Project.Domain.Entities.Users.User", b =>
+                {
+                    b.HasOne("Project.Domain.Entities.Photo", "Photo")
+                        .WithMany()
+                        .HasForeignKey("PhotoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Photo");
                 });
 
             modelBuilder.Entity("Project.Domain.Entities.Users.UserAccount", b =>

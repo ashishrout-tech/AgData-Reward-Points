@@ -28,9 +28,6 @@ namespace Project.Domain.Entities.Users
 
         public void AddPoints(int points)
         {
-            if (points <= 0)
-                throw new ArgumentOutOfRangeException(nameof(points), "Points to add must be positive.");
-
             Points += points;
         }
 

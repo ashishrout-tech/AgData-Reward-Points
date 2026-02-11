@@ -25,7 +25,7 @@ namespace Project.Domain.Interfaces
         Task<List<Transaction>> GetUserAdminAwardsAsync(Guid userId, Guid? adminId = null, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
         Task<int> GetTotalPointsEarnedAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<int> GetTotalPointsRedeemedAsync(Guid userId, CancellationToken cancellationToken = default);
-        Task<List<Transaction>> GetRecentTransactionsAsync(int days = 7, int take = 100, CancellationToken cancellationToken = default);
-        Task<List<(Guid UserId, string UserName, int TotalPoints)>> GetTopEarnersAsync(int take = 10, CancellationToken cancellationToken = default);
+        Task<List<Transaction>> GetRecentTransactionsAsync(int? days, int take = 100, CancellationToken cancellationToken = default);
+        Task<List<(Guid UserId, Guid? PhotoId, string UserName, int TotalPoints)>> GetTopEarnersAsync(int take = 10, CancellationToken cancellationToken = default);
     }
 }

@@ -18,7 +18,9 @@ namespace Project.Application.DTOs.Event
         [Required(ErrorMessage = "End time is required")]
         public DateTime EndTime { get; set; }
 
-        public List<string>? Tags { get; set; }
+        public Guid? PhotoId { get; set; }
+
+		public List<string>? Tags { get; set; }
     }
 
     public class UpdateEventRequest
@@ -29,7 +31,9 @@ namespace Project.Application.DTOs.Event
         [StringLength(1000, MinimumLength = 10, ErrorMessage = "Event description must be between 10 and 1000 characters")]
         public string? Description { get; set; }
 
-        public DateTime? StartTime { get; set; }
+        public Guid? PhotoId { get; set; }
+
+		public DateTime? StartTime { get; set; }
 
         public DateTime? EndTime { get; set; }
     }

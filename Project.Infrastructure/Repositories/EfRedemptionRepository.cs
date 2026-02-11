@@ -22,9 +22,10 @@ namespace Project.Infrastructure.Repositories
         public async Task<Redemption> AddAsync(Redemption redemption, CancellationToken cancellationToken = default)
         {
             await _db.Redemptions.AddAsync(redemption, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-            return redemption;
-        }
+			await _db.SaveChangesAsync(cancellationToken);
+
+			return redemption;
+		}
 
         public async Task<Redemption?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
@@ -32,15 +33,20 @@ namespace Project.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(r => r.User)
                 .Include(r => r.Product)
-                .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+				.ThenInclude(p => p.ProductPrice)
+                .Include(r => r.ApprovalAdmin)
+                .Include(r => r.RejectionAdmin)
+				.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
         }
 
         public async Task<List<Redemption>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             return await _db.Redemptions
                 .AsNoTracking()
-                .Include(r => r.Product)
-                .Where(r => r.UserId == userId)
+                .Include(r => r.User)
+				.Include(r => r.Product)
+				.ThenInclude(p => p.ProductPrice)
+				.Where(r => r.UserId == userId)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -50,7 +56,7 @@ namespace Project.Infrastructure.Repositories
             return await _db.Redemptions
                 .AsNoTracking()
                 .Include(r => r.User)
-                .Where(r => r.ProductId == productId && r.Status == 0) // Status 0 = Pending
+                .Where(r => r.ProductId == productId && (int)r.Status == 0) // Status 0 = Pending
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -67,20 +73,52 @@ namespace Project.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(r => r.User)
                 .Include(r => r.Product)
-                .Where(r => r.Status == 0) // Status 0 = Pending
+                .ThenInclude(p => p.ProductPrice)
+                .Where(r => (int)r.Status == 0) // Status 0 = Pending
                 .OrderByDescending(r => r.CreatedAt)
                 .Skip(skip)
                 .Take(take)
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<Redemption>> GetByStatusAsync(int status, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
+		public async Task<List<Redemption>> GetApprovedAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default)
+		{
+			return await _db.Redemptions
+				.AsNoTracking()
+				.Include(r => r.User)
+				.Include(r => r.Product)
+				.ThenInclude(p => p.ProductPrice)
+                .Include(r => r.ApprovalAdmin)
+				.Where(r => (int)r.Status == 1)
+				.OrderByDescending(r => r.CreatedAt)
+				.Skip(skip)
+				.Take(take)
+				.ToListAsync(cancellationToken);
+		}
+
+		public async Task<List<Redemption>> GetRejectedAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default)
+		{
+			return await _db.Redemptions
+				.AsNoTracking()
+				.Include(r => r.User)
+				.Include(r => r.Product)
+				.ThenInclude(p => p.ProductPrice)
+                .Include(r => r.RejectionAdmin)
+				.Where(r => (int)r.Status == 2)
+				.OrderByDescending(r => r.CreatedAt)
+				.Skip(skip)
+				.Take(take)
+				.ToListAsync(cancellationToken);
+		}
+
+		public async Task<List<Redemption>> GetByStatusAsync(int status, int skip = 0, int take = 10, CancellationToken cancellationToken = default)
         {
             return await _db.Redemptions
                 .AsNoTracking()
                 .Include(r => r.User)
                 .Include(r => r.Product)
-                .Where(r => (int)r.Status == status)
+				.ThenInclude(p => p.ProductPrice)
+				.Where(r => (int)r.Status == status)
                 .OrderByDescending(r => r.CreatedAt)
                 .Skip(skip)
                 .Take(take)
@@ -91,8 +129,10 @@ namespace Project.Infrastructure.Repositories
         {
             var query = _db.Redemptions
                 .AsNoTracking()
-                .Include(r => r.Product)
-                .Where(r => r.UserId == userId);
+                .Include(r => r.User)
+				.Include(r => r.Product)
+				.ThenInclude(p => p.ProductPrice)
+				.Where(r => r.UserId == userId);
 
             if (status.HasValue)
                 query = query.Where(r => (int)r.Status == status.Value);
@@ -109,7 +149,9 @@ namespace Project.Infrastructure.Repositories
             var query = _db.Redemptions
                 .AsNoTracking()
                 .Include(r => r.User)
-                .Where(r => r.ProductId == productId);
+                .Include(r => r.Product)
+                .ThenInclude(p => p.ProductPrice)
+				.Where(r => r.ProductId == productId);
 
             if (status.HasValue)
                 query = query.Where(r => (int)r.Status == status.Value);
@@ -126,7 +168,8 @@ namespace Project.Infrastructure.Repositories
             return await _db.Redemptions
                 .AsNoTracking()
                 .Include(r => r.Product)
-                .Where(r => (int)r.Status == 1) // Status 1 = Approved
+				.ThenInclude(p => p.ProductPrice)
+				.Where(r => (int)r.Status == 1) // Status 1 = Approved
                 .SumAsync(r => (int?)r.Product.ProductPrice.CurrentPoints ?? 0, cancellationToken);
         }
 
@@ -135,7 +178,8 @@ namespace Project.Infrastructure.Repositories
             return await _db.Redemptions
                 .AsNoTracking()
                 .Include(r => r.Product)
-                .Where(r => (int)r.Status == 2) // Status 2 = Rejected
+				.ThenInclude(p => p.ProductPrice)
+				.Where(r => (int)r.Status == 2) // Status 2 = Rejected
                 .SumAsync(r => (int?)r.Product.ProductPrice.CurrentPoints ?? 0, cancellationToken);
         }
 
@@ -145,7 +189,8 @@ namespace Project.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(r => r.User)
                 .Include(r => r.Product)
-                .Where(r => (int)r.Status == 2); // Status 2 = Rejected
+				.ThenInclude(p => p.ProductPrice)
+				.Where(r => (int)r.Status == 2); // Status 2 = Rejected
 
             if (!string.IsNullOrEmpty(reason))
                 query = query.Where(r => r.RejectionReason!.Contains(reason));
@@ -157,25 +202,35 @@ namespace Project.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<int> GetRedemptionCountByStatusAsync(int status, CancellationToken cancellationToken = default)
+        public async Task<int> GetRedemptionCountByStatusAsync(int status, Guid? userId, CancellationToken cancellationToken = default)
         {
-            return await _db.Redemptions
+            if(userId != null)
+            {
+                return await _db.Redemptions
+                    .AsNoTracking()
+                    .Where(r => r.UserId == userId && (int)r.Status == status)
+                    .CountAsync(cancellationToken);
+			}
+			return await _db.Redemptions
                 .AsNoTracking()
                 .Where(r => (int)r.Status == status)
                 .CountAsync(cancellationToken);
         }
 
-        public async Task<List<(Guid ProductId, string ProductName, int RedemptionCount)>> GetTopProductsAsync(int take = 10, CancellationToken cancellationToken = default)
+        public async Task<List<(Guid ProductId, Guid? PhotoId, string ProductName, int RedemptionCount)>> GetTopProductsAsync(int take = 10, CancellationToken cancellationToken = default)
         {
-            return await _db.Redemptions
-                .AsNoTracking()
-                .Include(r => r.Product)
-                .Where(r => (int)r.Status == 1) // Status 1 = Approved
-                .GroupBy(r => new { r.ProductId, r.Product.Name })
-                .Select(g => new ValueTuple<Guid, string, int>(g.Key.ProductId, g.Key.Name, g.Count()))
-                .OrderByDescending(x => x.Item3)
-                .Take(take)
-                .ToListAsync(cancellationToken);
-        }
+			var redemptions = await _db.Redemptions
+		    .AsNoTracking()
+		    .Include(r => r.Product)
+		    .Where(r => (int)r.Status == 1) // Status 1 = Approved
+		    .ToListAsync(cancellationToken);
+
+			return redemptions
+				.GroupBy(r => new { r.ProductId, r.Product.PhotoId, r.Product.Name })
+				.Select(g => (g.Key.ProductId, g.Key.PhotoId, g.Key.Name, g.Count()))
+				.OrderByDescending(x => x.Item3)
+				.Take(take)
+				.ToList();
+		}
     }
 }

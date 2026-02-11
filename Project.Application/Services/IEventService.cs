@@ -7,7 +7,7 @@ namespace Project.Application.Services
         // CRUD Operations
         Task<EventDetailDto> CreateEventAsync(CreateEventRequest request, Guid userId, CancellationToken cancellationToken = default);
         Task<EventDetailDto> GetEventAsync(Guid id, CancellationToken cancellationToken = default);
-        Task<List<EventDto>> GetAllEventsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+        Task<List<EventDetailDto>> GetAllEventsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default);
         Task<EventDetailDto> UpdateEventAsync(Guid id, UpdateEventRequest request, CancellationToken cancellationToken = default);
 
         // Status Operations
@@ -23,9 +23,9 @@ namespace Project.Application.Services
         Task<EventParticipantDetailDto> GetParticipantDetailsAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default);
 
         // Search & Filter
-        Task<List<EventDto>> SearchEventsAsync(string? title, Guid? organizerId, string? tag, DateTime? startDateFrom, DateTime? startDateTo, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
-        Task<List<EventDto>> GetEventsByOrganizerAsync(Guid organizerId, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
-        Task<List<EventDto>> GetUpcomingEventsAsync(int daysAhead = 30, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+        Task<List<EventDetailDto>> SearchEventsAsync(string? title, Guid? organizerId, string? tag, DateTime? startDateFrom, DateTime? startDateTo, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+        Task<List<EventDetailDto>> GetEventsByOrganizerAsync(Guid organizerId, int skip = 0, int take = 10, CancellationToken cancellationToken = default);
+        Task<List<EventDetailDto>> GetUpcomingEventsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default);
 
         // Tags Management
         Task<List<string>> AddTagAsync(Guid id, AddTagRequest request, CancellationToken cancellationToken = default);

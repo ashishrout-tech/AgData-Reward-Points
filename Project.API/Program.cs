@@ -51,6 +51,8 @@ builder.Services.AddScoped<IProductAsyncRepository, EfProductRepository>();
 builder.Services.AddScoped<IEventAsyncRepository, EfEventRepository>();
 builder.Services.AddScoped<ITransactionAsyncRepository, EfTransactionRepository>();
 builder.Services.AddScoped<IRedemptionAsyncRepository, EfRedemptionRepository>();
+builder.Services.AddScoped<IPasswordResetTokenAsyncRepository, EfPasswordResetTokenRepository>();
+builder.Services.AddScoped<IPhotoRepository, EfPhotoRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -59,6 +61,9 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IRedemptionService, RedemptionService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<IProfilePictureGeneratorService, ProfilePictureGeneratorService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 

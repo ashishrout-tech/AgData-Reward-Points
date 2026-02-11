@@ -23,7 +23,9 @@ namespace Project.Application.DTOs.Product
         [Required(ErrorMessage = "Initial stock is required")]
         [Range(0, int.MaxValue, ErrorMessage = "Initial stock must be non-negative")]
         public int InitialStock { get; set; }
-    }
+
+        public Guid? PhotoId { get; set; }
+	}
 
     public class UpdateProductRequest
     {
@@ -35,7 +37,8 @@ namespace Project.Application.DTOs.Product
 
         [StringLength(100, MinimumLength = 2, ErrorMessage = "Brand must be between 2 and 100 characters")]
         public string? Brand { get; set; }
-    }
+        public Guid? PhotoId { get; set; }
+	}
 
     public class UpdateProductPriceRequest
     {

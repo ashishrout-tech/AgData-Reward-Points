@@ -10,6 +10,7 @@ using Project.Application.DTOs.Transaction;
 using Project.Application.DTOs.Redemption;
 using UserDto = Project.Application.DTOs.User.UserDto;
 using EventDto = Project.Application.DTOs.Event.EventDto;
+using Project.Application.DTOs.Photo;
 
 namespace Project.Application.Mapping
 {
@@ -60,12 +61,15 @@ namespace Project.Application.Mapping
             CreateMap<User, Project.Application.DTOs.Transaction.TransactionUserDto>();
             CreateMap<Event, Project.Application.DTOs.Transaction.TransactionEventDto>();
 
-            // Redemption mappings
-            CreateMap<Redemption, RedemptionDetailDto>()
+			// Redemption mappings
+			CreateMap<User, UserBasicDto>();
+			CreateMap<Redemption, RedemptionDetailDto>()
                 .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User))
-                .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product));
+                .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
+                .ForMember(dest => dest.ApprovedByName, opt => opt.MapFrom(src => src.ApprovedBy != null ? src.ApprovalAdmin.Name : null))
+                .ForMember(dest => dest.RejectedByName, opt => opt.MapFrom(src => src.RejectedBy != null ? src.RejectionAdmin.Name : null));
 
-            CreateMap<Redemption, RedemptionDto>()
+			CreateMap<Redemption, RedemptionDto>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.Name))
                 .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User.Email))
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.Name))
@@ -73,6 +77,9 @@ namespace Project.Application.Mapping
 
             CreateMap<Product, Project.Application.DTOs.Redemption.ProductBasicDto>()
                 .ForMember(dest => dest.PointsRequired, opt => opt.MapFrom(src => (int)src.ProductPrice.CurrentPoints));
-        }
+
+            CreateMap<Photo, PhotoOriginalDto>();
+            CreateMap<Photo, PhotoThumbDto>();
+		}
     }
 }

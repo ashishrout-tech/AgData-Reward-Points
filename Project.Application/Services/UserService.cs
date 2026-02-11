@@ -9,16 +9,19 @@ namespace Project.Application.Services
     public class UserService : IUserService
     {
         private readonly IUserAsyncRepository _userRepository;
-        private readonly IMapper _mapper;
+        private readonly IProfilePictureGeneratorService _profilePictureGeneratorService;
+		private readonly IMapper _mapper;
         private readonly ILogger<UserService> _logger;
 
         public UserService(
             IUserAsyncRepository userRepository,
-            IMapper mapper,
+            IProfilePictureGeneratorService profilePictureGeneratorService,
+			IMapper mapper,
             ILogger<UserService> logger)
         {
             _userRepository = userRepository;
-            _mapper = mapper;
+            _profilePictureGeneratorService = profilePictureGeneratorService;
+			_mapper = mapper;
             _logger = logger;
         }
 
@@ -43,6 +46,16 @@ namespace Project.Application.Services
                 var user = new User(request.Name, request.Email, request.EmployeeId, request.Role, request.Password);
 
                 user.CreateUserAccount();
+
+                if(request.PhotoId.HasValue)
+                {
+                    user.SetPhoto(request.PhotoId.Value);
+				}
+                else
+                {
+                    var id = await _profilePictureGeneratorService.GenerateProfilePictureAsync(request.Name, cancellationToken);
+                    user.SetPhoto(id);
+				}
 
                 var createdUser = await _userRepository.AddAsync(user, cancellationToken);
 
@@ -113,6 +126,11 @@ namespace Project.Application.Services
                     user.UpdateUserRole(request.Role.Value);
                 }
 
+                if (request.PhotoId.HasValue)
+                {
+                    user.SetPhoto(request.PhotoId.Value);
+                }
+
                 if (request.IsActive.HasValue)
                 {
                     if (request.IsActive.Value)
@@ -123,6 +141,12 @@ namespace Project.Application.Services
                     {
                         user.DeactivateUser();
                     }
+                }
+
+                if(user.PhotoId == null)
+                {
+                    var generatedPhotoId = await _profilePictureGeneratorService.GenerateProfilePictureAsync(user.Name, cancellationToken);
+                    user.SetPhoto(generatedPhotoId);
                 }
 
                 await _userRepository.UpdateAsync(user, cancellationToken);

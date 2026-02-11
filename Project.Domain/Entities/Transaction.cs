@@ -31,6 +31,9 @@ namespace Project.Domain.Entities
         public Guid? AdminApprovedBy { get; private set; }
         public string Reason { get; private set; } = null!;
 
+        // Redemption-related (nullable - only for Redeem type or RedemptionRefund source)
+        public Guid? RedemptionId { get; private set; }
+
         // Reversal tracking
         public bool IsReversed { get; private set; }
         public string? ReversalReason { get; private set; }
@@ -43,6 +46,7 @@ namespace Project.Domain.Entities
         public EventParticipant? EventParticipant { get; private set; }
         public User? AdminUser { get; private set; }
         public User? ReversalAdmin { get; private set; }
+        public Redemption? Redemption { get; private set; }
 
         private Transaction() { }
 
@@ -93,12 +97,37 @@ namespace Project.Domain.Entities
             IsReversed = false;
         }
 
-        public static Transaction CreateRedemptionRefund(Guid userId, int points, string reason, Guid approvalAdmin)
+        public static Transaction CreateRedemptionDeduction(Guid userId, int points, string reason, Guid redemptionId)
         {
             var transaction = new Transaction();
             transaction.ValidateUserId(userId);
             transaction.ValidatePoints(points);
             transaction.ValidateReason(reason);
+
+            if (redemptionId == Guid.Empty)
+                throw new ArgumentException("RedemptionId cannot be empty.", nameof(redemptionId));
+
+            transaction.Id = Guid.NewGuid();
+            transaction.UserId = userId;
+            transaction.Type = TransactionType.Redeem;
+            transaction.Points = points;
+            transaction.Reason = reason;
+            transaction.TimeStamp = DateTime.UtcNow;
+            transaction.RedemptionId = redemptionId;
+            transaction.IsReversed = false;
+
+            return transaction;
+        }
+
+        public static Transaction CreateRedemptionRefund(Guid userId, int points, string reason, Guid redemptionId)
+        {
+            var transaction = new Transaction();
+            transaction.ValidateUserId(userId);
+            transaction.ValidatePoints(points);
+            transaction.ValidateReason(reason);
+
+            if (redemptionId == Guid.Empty)
+                throw new ArgumentException("RedemptionId cannot be empty.", nameof(redemptionId));
 
             transaction.Id = Guid.NewGuid();
             transaction.UserId = userId;
@@ -107,7 +136,7 @@ namespace Project.Domain.Entities
             transaction.Points = points;
             transaction.Reason = reason;
             transaction.TimeStamp = DateTime.UtcNow;
-            transaction.AdminApprovedBy = approvalAdmin;
+            transaction.RedemptionId = redemptionId;
             transaction.IsReversed = false;
 
             return transaction;

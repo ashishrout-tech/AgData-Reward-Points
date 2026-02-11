@@ -227,5 +227,42 @@ namespace Project.API.Controllers
                 return StatusCode(500, new { message = "An error occurred while deactivating user" });
             }
         }
+
+        /// <summary>
+        /// Get current authenticated user information
+        /// </summary>
+        [HttpGet("me")]
+        public ActionResult<object> GetCurrentUser()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                var roleClaim = User.FindFirst(ClaimTypes.Role);
+                var emailClaim = User.FindFirst(ClaimTypes.Email);
+                var nameClaim = User.FindFirst(ClaimTypes.Name);
+
+                if (userIdClaim == null)
+                {
+                    return Unauthorized(new { message = "Invalid token" });
+                }
+
+                var userId = Guid.Parse(userIdClaim.Value);
+                
+                _logger.LogInformation("User info requested: {UserId}", userId);
+
+                return Ok(new
+                {
+                    userId = userId,
+                    role = roleClaim?.Value ?? "USER",
+                    email = emailClaim?.Value,
+                    name = nameClaim?.Value
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error retrieving current user: {Message}", ex.Message);
+                return StatusCode(500, new { message = "An error occurred while retrieving user information" });
+            }
+        }
     }
 }

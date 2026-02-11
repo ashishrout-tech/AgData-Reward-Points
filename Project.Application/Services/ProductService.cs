@@ -36,6 +36,11 @@ namespace Project.Application.Services
 
                 product.SetPriceAndStock(productPrice, productStock);
 
+                if(request.PhotoId != null)
+                {
+                    product.SetPhoto(request.PhotoId.Value);
+				}
+
                 var createdProduct = await _productRepository.AddAsync(product, cancellationToken);
 
                 _logger.LogInformation("Product created successfully: {ProductId}", createdProduct.Id);
@@ -67,8 +72,8 @@ namespace Project.Application.Services
             _logger.LogInformation("Getting all products");
 
             var products = await _productRepository.GetAllAsync(cancellationToken);
-            var activeProducts = products.Where(p => p.IsActive).ToList();
-            return _mapper.Map<List<ProductDto>>(activeProducts);
+            //var activeProducts = products.Where(p => p.IsActive).ToList();
+            return _mapper.Map<List<ProductDto>>(products);
         }
 
         public async Task<ProductDto> UpdateProductAsync(Guid id, UpdateProductRequest request, CancellationToken cancellationToken = default)
@@ -90,6 +95,11 @@ namespace Project.Application.Services
                     var brand = request.Brand ?? product.Brand;
 
                     product.UpdateDetails(name, description, brand);
+                }
+
+                if(request.PhotoId != null)
+                {
+                    product.SetPhoto(request.PhotoId.Value);
                 }
 
                 await _productRepository.UpdateAsync(product, cancellationToken);
@@ -267,7 +277,35 @@ namespace Project.Application.Services
             }
         }
 
-        public async Task<List<ProductDto>> SearchProductsAsync(string? name, string? brand, CancellationToken cancellationToken = default)
+		public async Task<ProductStockDto> IncreaseStockAsync(Guid productId, int quantity, CancellationToken cancellationToken = default)
+		{
+			try
+			{
+				_logger.LogInformation("Decreasing product stock: {ProductId}", productId);
+
+				var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
+				if (product == null)
+				{
+					throw new KeyNotFoundException($"Product with ID '{productId}' not found");
+				}
+
+				var currentStock = product.ProductStock.AvailableStock;
+
+				product.ProductStock.UpdateStock(currentStock + quantity);
+				await _productRepository.UpdateAsync(product, cancellationToken);
+
+				_logger.LogInformation("Product stock decreased successfully: {ProductId}", productId);
+
+				return _mapper.Map<ProductStockDto>(product.ProductStock);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError("Error decreasing product stock: {Message}", ex.Message);
+				throw;
+			}
+		}
+
+		public async Task<List<ProductDto>> SearchProductsAsync(string? name, string? brand, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Searching products: Name={Name}, Brand={Brand}", name, brand);
 

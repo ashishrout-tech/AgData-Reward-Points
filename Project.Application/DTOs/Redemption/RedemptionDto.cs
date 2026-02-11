@@ -2,7 +2,21 @@ using System;
 
 namespace Project.Application.DTOs.Redemption
 {
-    public class RedemptionDto
+	public class RedemptionDto
+	{
+		public Guid Id { get; set; }
+		public Guid UserId { get; set; }
+		public string UserName { get; set; }
+		public string UserEmail { get; set; }
+		public Guid ProductId { get; set; }
+		public string ProductName { get; set; }
+		public int PointsRequired { get; set; }
+		public int Status { get; set; }
+		public DateTime CreatedAt { get; set; }
+        public DateTime? ApprovedOn { get; set; }
+        public DateTime? RejectedOn { get; set; }
+	}
+	public class RedemptionPendingDto
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
@@ -13,11 +27,40 @@ namespace Project.Application.DTOs.Redemption
         public int PointsRequired { get; set; }
         public int Status { get; set; }
         public DateTime CreatedAt { get; set; }
-        public DateTime? ApprovedOn { get; set; }
-        public DateTime? RejectedOn { get; set; }
     }
 
-    public class RedemptionDetailDto
+	public class RedemptionApprovedDto
+	{
+		public Guid Id { get; set; }
+		public Guid UserId { get; set; }
+		public string UserName { get; set; }
+		public string UserEmail { get; set; }
+		public Guid ProductId { get; set; }
+		public string ProductName { get; set; }
+		public int PointsRequired { get; set; }
+		public int Status { get; set; }
+		public DateTime CreatedAt { get; set; }
+        public Guid ApprovedBy { get; set; }
+		public string ApprovedByName { get; set; }
+		public DateTime? ApprovedOn { get; set; }
+	}
+
+	public class RedemptionRejectedDto
+	{
+		public Guid Id { get; set; }
+		public Guid UserId { get; set; }
+		public string UserName { get; set; }
+		public string UserEmail { get; set; }
+		public Guid ProductId { get; set; }
+		public string ProductName { get; set; }
+		public int PointsRequired { get; set; }
+		public int Status { get; set; }
+		public DateTime CreatedAt { get; set; }
+		public Guid RejectedBy { get; set; }
+        public string RejectedByName { get; set; }
+		public DateTime? RejectedOn { get; set; }
+	}
+	public class RedemptionDetailDto
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
@@ -27,9 +70,11 @@ namespace Project.Application.DTOs.Redemption
         public int Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public Guid? ApprovedBy { get; set; }
-        public DateTime? ApprovedOn { get; set; }
+        public string? ApprovedByName { get; set; }
+		public DateTime? ApprovedOn { get; set; }
         public Guid? RejectedBy { get; set; }
-        public DateTime? RejectedOn { get; set; }
+        public string? RejectedByName { get; set; }
+		public DateTime? RejectedOn { get; set; }
         public string? RejectionReason { get; set; }
     }
 

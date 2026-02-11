@@ -25,7 +25,9 @@ namespace Project.Application.DTOs.User
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
             ErrorMessage = "Password must contain uppercase, lowercase, digit, and special character")]
         public string Password { get; set; } = null!;
-    }
+
+        public Guid? PhotoId { get; set; }
+	}
 
     public class UpdateUserRequest
     {
@@ -41,7 +43,9 @@ namespace Project.Application.DTOs.User
         public UserRole? Role { get; set; }
 
         public bool? IsActive { get; set; }
-    }
+
+        public Guid? PhotoId { get; set; }
+	}
 
     public class LoginRequest
     {
@@ -53,12 +57,21 @@ namespace Project.Application.DTOs.User
         public string Password { get; set; } = null!;
     }
 
-    public class LoginResponse
+    public class ResetPasswordRequest
+    {
+        [Required(ErrorMessage = "Token is required")]
+        public string Token { get; set; } = null!;
+
+        [Required(ErrorMessage = "New password is required")]
+        public string NewPassword { get; set; } = null!;
+	}
+
+	public class LoginResponse
     {
         public Guid UserId { get; set; }
         public string Name { get; set; } = null!;
         public string Email { get; set; } = null!;
-        public UserRole Role { get; set; }
+        public string Role { get; set; }
         public string AccessToken { get; set; } = null!;
         public DateTime ExpiresAt { get; set; }
     }

@@ -30,7 +30,8 @@ namespace Project.API.Controllers
         /// Create new event
         /// </summary>
         [HttpPost]
-        public async Task<ActionResult<EventDetailDto>> CreateEvent(
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<EventDetailDto>> CreateEvent(
             [FromBody] CreateEventRequest request,
             CancellationToken cancellationToken)
         {
@@ -91,7 +92,7 @@ namespace Project.API.Controllers
         /// Get all events
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<List<EventDto>>> GetAllEvents(
+        public async Task<ActionResult<List<EventDetailDto>>> GetAllEvents(
             [FromQuery] int skip = 0,
             [FromQuery] int take = 10,
             CancellationToken cancellationToken = default)
@@ -113,7 +114,8 @@ namespace Project.API.Controllers
         /// Update event (organizer/admin only)
         /// </summary>
         [HttpPut("{id}")]
-        public async Task<ActionResult<EventDetailDto>> UpdateEvent(
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<EventDetailDto>> UpdateEvent(
             Guid id,
             [FromBody] UpdateEventRequest request,
             CancellationToken cancellationToken)
@@ -155,7 +157,8 @@ namespace Project.API.Controllers
         /// Cancel event (organizer/admin only)
         /// </summary>
         [HttpPost("{id}/cancel")]
-        public async Task<ActionResult<EventDetailDto>> CancelEvent(Guid id, CancellationToken cancellationToken)
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<EventDetailDto>> CancelEvent(Guid id, CancellationToken cancellationToken)
         {
             try
             {
@@ -184,7 +187,8 @@ namespace Project.API.Controllers
         /// Reschedule event (organizer/admin only)
         /// </summary>
         [HttpPost("{id}/reschedule")]
-        public async Task<ActionResult<EventDetailDto>> RescheduleEvent(
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<EventDetailDto>> RescheduleEvent(
             Guid id,
             [FromBody] RescheduleEventRequest request,
             CancellationToken cancellationToken)
@@ -226,7 +230,8 @@ namespace Project.API.Controllers
         /// Get event participants
         /// </summary>
         [HttpGet("{id}/participants")]
-        public async Task<ActionResult<List<EventParticipantDto>>> GetEventParticipants(
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<List<EventParticipantDto>>> GetEventParticipants(
             Guid id,
             [FromQuery] int? role = null,
             [FromQuery] int skip = 0,
@@ -279,7 +284,7 @@ namespace Project.API.Controllers
         }
 
         /// <summary>
-        /// Add participant to event (organizer/admin only)
+        /// Add participant to event
         /// </summary>
         [HttpPost("{id}/participants")]
         public async Task<ActionResult<EventParticipantDto>> AddParticipant(
@@ -379,7 +384,8 @@ namespace Project.API.Controllers
         /// Assign rank to participant (organizer/admin only)
         /// </summary>
         [HttpPut("{id}/participants/{userId}/rank")]
-        public async Task<ActionResult<EventParticipantDto>> AssignParticipantRank(
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<EventParticipantDto>> AssignParticipantRank(
             Guid id,
             Guid userId,
             [FromBody] AssignRankRequest request,
@@ -417,7 +423,7 @@ namespace Project.API.Controllers
         /// Search events
         /// </summary>
         [HttpGet("search/query")]
-        public async Task<ActionResult<List<EventDto>>> SearchEvents(
+        public async Task<ActionResult<List<EventDetailDto>>> SearchEvents(
             [FromQuery] string? title = null,
             [FromQuery] Guid? organizerId = null,
             [FromQuery] string? tag = null,
@@ -444,7 +450,7 @@ namespace Project.API.Controllers
         /// Get events by organizer
         /// </summary>
         [HttpGet("organizer/{organizerId}")]
-        public async Task<ActionResult<List<EventDto>>> GetEventsByOrganizer(
+        public async Task<ActionResult<List<EventDetailDto>>> GetEventsByOrganizer(
             Guid organizerId,
             [FromQuery] int skip = 0,
             [FromQuery] int take = 10,
@@ -467,16 +473,16 @@ namespace Project.API.Controllers
         /// Get upcoming events
         /// </summary>
         [HttpGet("upcoming")]
-        public async Task<ActionResult<List<EventDto>>> GetUpcomingEvents(
-            [FromQuery] int daysAhead = 30,
+        public async Task<ActionResult<List<EventDetailDto>>> GetUpcomingEvents(
+            //[FromQuery] int daysAhead = 30,
             [FromQuery] int skip = 0,
             [FromQuery] int take = 10,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger.LogInformation("Getting upcoming events - DaysAhead: {DaysAhead}", daysAhead);
-                var events = await _eventService.GetUpcomingEventsAsync(daysAhead, skip, take, cancellationToken);
+                _logger.LogInformation("Getting upcoming events");
+                var events = await _eventService.GetUpcomingEventsAsync(skip, take, cancellationToken);
                 return Ok(events);
             }
             catch (Exception ex)
@@ -490,7 +496,8 @@ namespace Project.API.Controllers
         /// Add tag to event (organizer/admin only)
         /// </summary>
         [HttpPost("{id}/tags")]
-        public async Task<ActionResult<List<string>>> AddTag(
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<List<string>>> AddTag(
             Guid id,
             [FromBody] AddTagRequest request,
             CancellationToken cancellationToken)
@@ -522,7 +529,8 @@ namespace Project.API.Controllers
         /// Remove tag from event (organizer/admin only)
         /// </summary>
         [HttpDelete("{id}/tags/{tag}")]
-        public async Task<ActionResult<List<string>>> RemoveTag(
+		[Authorize(Roles = "ADMIN")]
+		public async Task<ActionResult<List<string>>> RemoveTag(
             Guid id,
             string tag,
             CancellationToken cancellationToken)
