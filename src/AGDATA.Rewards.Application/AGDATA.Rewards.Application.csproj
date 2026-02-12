@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper"/>
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection"/>
+    <PackageReference Include="MailKit"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+    <PackageReference Include="MimeKit"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AGDATA.Rewards.Core\AGDATA.Rewards.Core.csproj" />
+    <ProjectReference Include="..\AGDATA.Rewards.Infrastructure\AGDATA.Rewards.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

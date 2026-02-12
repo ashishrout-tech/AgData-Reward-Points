@@ -1,0 +1,51 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+
+    <!-- EF Core (all must have the same version) -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.2" />
+
+    <!-- JWT / IdentityModel -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.15.0" />
+
+    <!-- AutoMapper -->
+    <!-- <PackageVersion Include="AutoMapper" Version="16.0.0" /> -->
+    <!-- Remove: AutoMapper.Extensions.Microsoft.DependencyInjection (deprecated & merged into AutoMapper) -->
+
+    
+    <!-- AutoMapper -->
+    <PackageVersion Include="AutoMapper" Version="12.0.1" />
+
+    <!-- AutoMapper Dependency Injection support (legacy, deprecated) -->
+    <PackageVersion Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+
+
+    <!-- Mail -->
+    <PackageVersion Include="MailKit" Version="4.14.1" />
+    <PackageVersion Include="MimeKit" Version="4.14.0" />
+
+    <!-- Logging / Configuration -->
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+
+    <!-- Swagger / OpenAPI -->
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.2" />
+
+    <!-- Core -->
+    <PackageVersion Include="BCrypt.Net-Next" Version="4.0.3" />
+
+    <!-- SixLabors -->
+    <PackageVersion Include="SixLabors.Fonts" Version="2.1.3" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageVersion Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
+
+  </ItemGroup>
+</Project>

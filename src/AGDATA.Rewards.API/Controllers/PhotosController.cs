@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Project.Application.DTOs.Photo;
 using Project.Application.Services;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Project.API.Controllers
 {
@@ -32,12 +33,14 @@ namespace Project.API.Controllers
 		/// <response code="400">Invalid file or no file provided. Only image files are accepted.</response>
 		/// <response code="401">Unauthorized - authentication required.</response>
 		/// <response code="500">Internal server error occurred during upload.</response>
-		[HttpPost]
+		[HttpPost("upload")]
+		[Consumes("multipart/form-data")]
 		[RequestSizeLimit(25_000_000)]
 		[ProducesResponseType(StatusCodes.Status200OK)]
 		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		[ProducesResponseType(StatusCodes.Status401Unauthorized)]
 		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+		[ApiExplorerSettings(IgnoreApi = true)]
 		public async Task<IActionResult> Upload([FromForm] IFormFile file, CancellationToken ct)
 		{
 			try
