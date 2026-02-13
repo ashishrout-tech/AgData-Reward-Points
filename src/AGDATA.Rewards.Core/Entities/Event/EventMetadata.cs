@@ -1,4 +1,4 @@
-using Project.Domain.Entities.Users;
+﻿using AGDATA.Rewards.Core.UserAggregate;
 using System;
 using System.Collections.Generic;
 using System.Linq;

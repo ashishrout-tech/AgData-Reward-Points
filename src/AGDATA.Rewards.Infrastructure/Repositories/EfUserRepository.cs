@@ -1,5 +1,5 @@
+﻿using AGDATA.Rewards.Core.UserAggregate;
 using Microsoft.EntityFrameworkCore;
-using Project.Domain.Entities.Users;
 using Project.Domain.Interfaces;
 using Project.Infrastructure.Data;
 using System;

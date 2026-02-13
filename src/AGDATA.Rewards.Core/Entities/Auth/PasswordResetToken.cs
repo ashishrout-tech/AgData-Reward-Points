@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Project.Domain.Entities.Users;
+using AGDATA.Rewards.Core.UserAggregate;
 
 namespace Project.Domain.Entities.Auth
 {

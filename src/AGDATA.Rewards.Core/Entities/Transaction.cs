@@ -1,5 +1,4 @@
-using Project.Domain.Enums;
-using Project.Domain.Entities.Users;
+﻿using Project.Domain.Enums;
 using EventEntity = Project.Domain.Entities.Event.Event;
 using Project.Domain.Entities.Event;
 using System;
@@ -7,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AGDATA.Rewards.Core.UserAggregate;
 
 namespace Project.Domain.Entities
 {

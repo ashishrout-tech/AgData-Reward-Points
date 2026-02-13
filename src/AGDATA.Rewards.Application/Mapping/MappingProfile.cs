@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Project.Domain.Entities.Users;
 using Project.Application.DTOs.User;
 using Project.Domain.Entities.Product;
@@ -11,6 +11,7 @@ using Project.Application.DTOs.Redemption;
 using UserDto = Project.Application.DTOs.User.UserDto;
 using EventDto = Project.Application.DTOs.Event.EventDto;
 using Project.Application.DTOs.Photo;
+using AGDATA.Rewards.Core.UserAggregate;
 
 namespace Project.Application.Mapping
 {

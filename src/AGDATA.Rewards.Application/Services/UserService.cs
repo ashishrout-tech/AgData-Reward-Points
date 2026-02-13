@@ -1,7 +1,7 @@
+﻿using AGDATA.Rewards.Core.UserAggregate;
 using AutoMapper;
 using Microsoft.Extensions.Logging;
 using Project.Application.DTOs.User;
-using Project.Domain.Entities.Users;
 using Project.Domain.Interfaces;
 
 namespace Project.Application.Services

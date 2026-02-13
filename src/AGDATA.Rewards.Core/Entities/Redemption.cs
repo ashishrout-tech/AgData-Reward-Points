@@ -1,11 +1,11 @@
-using Project.Domain.Enums;
-using Project.Domain.Entities.Users;
+﻿using Project.Domain.Enums;
 using ProductEntity = Project.Domain.Entities.Product.Product;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AGDATA.Rewards.Core.UserAggregate;
 
 namespace Project.Domain.Entities
 {

@@ -1,3 +1,4 @@
+﻿using AGDATA.Rewards.Core.UserAggregate;
 using Microsoft.EntityFrameworkCore;
 using Project.Domain.Entities;
 using Project.Domain.Entities.Auth;

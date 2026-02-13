@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using Project.Application.DTOs.User;
 using Project.Domain.Interfaces;
-using Project.Domain.Entities.Users;
 using Project.Domain.Entities.Auth;
+using AGDATA.Rewards.Core.UserAggregate;
 
 namespace Project.Application.Services
 {
