@@ -26,8 +26,6 @@ public sealed class User : IAggregateRoot
       throw new ArgumentException("EmployeeId cannot be null or empty.", nameof(employeeId));
     if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
       throw new ArgumentException("Password must be at least 8 characters.", nameof(password));
-    if (!Enum.IsDefined(role))
-      throw new ArgumentException("Invalid user role.", nameof(role));
 
     Id = Guid.NewGuid();
     Name = name;
@@ -41,11 +39,13 @@ public sealed class User : IAggregateRoot
 
   public bool VerifyPassword(string password)
   {
+    ThrowIfInactive();
     return BCrypt.Net.BCrypt.Verify(password, PasswordHash);
   }
 
   public bool ChangePassword(string? currentPassword, string newPassword)
   {
+    ThrowIfInactive();
     if (currentPassword != null && !VerifyPassword(currentPassword))
       throw new UnauthorizedAccessException("Current password is incorrect.");
     if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
@@ -56,28 +56,47 @@ public sealed class User : IAggregateRoot
 
   public void UpdateUserRole(UserRole role)
   {
-    Role = role;
+    ThrowIfInactive();
+    Role = role; 
   }
 
-  public void DeactivateUser()
+  public void UpdateUserDetails(UserName? name, string? employeeId)
   {
-    IsActive = false;
+    ThrowIfInactive();
+    if (string.IsNullOrWhiteSpace(employeeId))
+      throw new ArgumentException("EmployeeId cannot be null or empty.", nameof(employeeId));
+    Name = name ?? Name;
+    EmployeeId = employeeId ?? EmployeeId;
   }
 
-  public void ActivateUser()
+  public void EarnPoints(int points)
   {
-    IsActive = true;
+    ThrowIfInactive();
+    UserAccount.AddPoints(points);
   }
 
-  public bool IsUserActive()
+  public void RedeemPoints(int points)
   {
-    return IsActive;
+    ThrowIfInactive();
+    UserAccount.DeductPoints(points);
   }
 
+  public void DeactivateUser() => IsActive = false;
+
+  public void ActivateUser() => IsActive = true;
+
+  public bool IsUserActive() => IsActive;
   public void SetPhoto(Guid photoId)
   {
+    ThrowIfInactive();
     if (photoId == Guid.Empty)
       throw new ArgumentException("PhotoId cannot be empty.", nameof(photoId));
     PhotoId = photoId;
+  }
+
+  private void ThrowIfInactive()
+  {
+    if (!IsActive)
+      throw new InvalidOperationException("User is inactive.");
   }
 }

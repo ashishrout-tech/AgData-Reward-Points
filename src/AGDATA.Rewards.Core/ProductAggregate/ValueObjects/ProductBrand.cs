@@ -5,16 +5,15 @@ using AGDATA.Rewards.Core.Common;
 
 namespace AGDATA.Rewards.Core.ProductAggregate.ValueObjects;
 
-public sealed class ProductName : ValueObject
+public sealed class ProductBrand : ValueObject
 {
   public string Value { get; }
-
-  public ProductName(string value)
+  public ProductBrand(string value)
   {
     if (string.IsNullOrWhiteSpace(value))
-      throw new ArgumentException("Product name cannot be null or empty.", nameof(value));
-    if (value.Length > 100)
-      throw new ArgumentException("Product name cannot exceed 100 characters.", nameof(value));
+      throw new ArgumentException("Product brand cannot be null or empty.", nameof(value));
+    if (value.Length > 50)
+      throw new ArgumentException("Product brand cannot exceed 50 characters.", nameof(value));
     Value = value;
   }
   protected override IEnumerable<object> GetEqualityComponents()

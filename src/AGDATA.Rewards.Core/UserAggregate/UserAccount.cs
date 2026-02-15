@@ -16,10 +16,16 @@ public sealed class UserAccount
 
   internal void AddPoints(int points)
   {
+    if (points <= 0)
+      throw new ArgumentOutOfRangeException(nameof(points), "Points to redeem must be positive.");
+
+    if (points > 1000_000 || Points + points > 1000_000)
+      throw new InvalidOperationException("Points cannot exceed 1,000,000.");
+
     Points += points;
   }
 
-  internal void RedeemPoints(int points)
+  internal void DeductPoints(int points)
   {
     if (points <= 0)
       throw new ArgumentOutOfRangeException(nameof(points), "Points to redeem must be positive.");
