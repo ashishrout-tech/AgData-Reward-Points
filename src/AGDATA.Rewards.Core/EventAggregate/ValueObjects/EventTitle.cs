@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using AGDATA.Rewards.Core.Common;
+﻿using AGDATA.Rewards.Core.Common;
 
 namespace AGDATA.Rewards.Core.EventAggregate.ValueObjects;
 

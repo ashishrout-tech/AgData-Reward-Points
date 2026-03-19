@@ -1,9 +1,6 @@
-﻿using System.Security.AccessControl;
-using AGDATA.Rewards.Core.Common;
+﻿using AGDATA.Rewards.Core.Common;
 using AGDATA.Rewards.Core.EventAggregate.ValueObjects;
-using AGDATA.Rewards.Core.UserAggregate;
 using Project.Domain.Entities;
-using Project.Domain.Enums;
 
 namespace AGDATA.Rewards.Core.EventAggregate;
 
@@ -16,19 +13,24 @@ public sealed class Event : IAggregateRoot
   public Guid? PhotoId { get; private set; }
   private readonly List<EventParticipant> _participants = [];
   public IReadOnlyCollection<EventParticipant> Participants => _participants.AsReadOnly();
-  public EventMetadata EventMetadata { get; private set; }
   public EventSchedule EventSchedule { get; private set; }
+  public EventMetadata EventMetadata { get; private set; }
   public Photo? Photo { get; private set; }
   private Event() { }
 
-  public Event(EventTitle title, string description)
+  public Event(EventTitle title, string description, Guid organizerId, DateTime startTime, DateTime endTime)
   {
     if (string.IsNullOrWhiteSpace(description))
       throw new ArgumentException("Event description cannot be null or empty.", nameof(description));
+    ThrowIfInaccurateDateTime(startTime, endTime);
 
     Id = Guid.NewGuid();
     Title = title;
     Description = description;
+    EventSchedule = new EventSchedule(Id, startTime, endTime);
+    EventMetadata = new EventMetadata(Id, organizerId);
+    EventParticipant eventOrganizer = new(Id, organizerId, EventParticipantRole.Organizer);
+    _participants.Add(eventOrganizer);
   }
 
   public void UpdateDetails(EventTitle? title, string? description)
@@ -44,14 +46,26 @@ public sealed class Event : IAggregateRoot
       throw new ArgumentException("PhotoId cannot be empty.", nameof(PhotoId));
     this.PhotoId = PhotoId;
   }
-  public void SetMetadata(EventMetadata metadata)
+
+  public void UpdateSchedule(DateTime newStart, DateTime newEnd)
   {
-    EventMetadata = metadata;
+    ThrowIfCancelled();
+    ThrowIfInaccurateDateTime(newStart, newEnd);
+    EventSchedule.Reschedule(newStart, newEnd);
   }
 
-  public void SetSchedule(EventSchedule schedule)
+  public void AddTag(params string[] tags)
   {
-    EventSchedule = schedule;
+    ThrowIfCancelled();
+    foreach (var tag in tags)
+      EventMetadata.AddTag(tag);
+  }
+
+  public void RemoveTag(params string[] tags)
+  {
+    ThrowIfCancelled();
+    foreach (var tag in tags)
+      EventMetadata.RemoveTag(tag);
   }
 
   public void AddParticipant(Guid userId)
@@ -61,112 +75,64 @@ public sealed class Event : IAggregateRoot
     if(_participants.Any(p => p.UserId == userId))
       throw new InvalidOperationException("Participant already registered for this event.");
 
-    EventParticipant participant = new EventParticipant(Id, userId);
+    EventParticipant participant = new(Id, userId);
     _participants.Add(participant);
   }
 
   public void RemoveParticipant(Guid userId)
   {
     ThrowIfCancelled();
-    var participant = _participants.FirstOrDefault(p => p.UserId == userId);
-
-    if (participant == null)
-      throw new InvalidOperationException("Participant not found in this event.");
+    var participant = GetParticipant(userId);
 
     _participants.Remove(participant);
   }
 
   public void CancelEvent() => IsCancelled = true;
 
+  public void UpdateParticipantRole(Guid userId, EventParticipantRole newRole)
+  {
+    ThrowIfCancelled();
+    var participant = GetParticipant(userId);
+
+    participant.UpdateRole(newRole);
+  }
+
+  public void AssignParticipantRank(Guid userId, int rank)
+  {
+    if(rank <= 0)
+      throw new ArgumentOutOfRangeException(nameof(rank), "Rank must be a positive integer.");
+    if(rank > _participants.Count)
+      throw new ArgumentOutOfRangeException(nameof(rank), "Rank cannot exceed the number of participants.");
+
+    ThrowIfCancelled();
+    var participant = GetParticipant(userId);
+    participant.AssignRank(rank);
+  }
+
+  private EventParticipant GetParticipant(Guid userId)
+  {
+    var participant = _participants.FirstOrDefault(p => p.UserId == userId);
+    if (participant == null)
+      throw new InvalidOperationException("Participant not found in this event.");
+    return participant;
+  }
+  
   private void ThrowIfCancelled()
   {
     if (IsCancelled)
       throw new InvalidOperationException("This event has been cancelled.");
   }
-}
-
-public sealed class EventParticipant
-{
-  public Guid EventId { get; private set; }
-  public Guid UserId { get; private set; }
-  public ParticipantRole Role { get; private set; }
-  public int? Rank { get; private set; }
-  public DateTime JoinedAt { get; private set; } = DateTime.UtcNow;
-  private EventParticipant() { }
-
-  internal EventParticipant(Guid eventId, Guid userId, ParticipantRole role = ParticipantRole.Attendee)
+  private static void ThrowIfInaccurateDateTime(DateTime start, DateTime end)
   {
-    EventId = eventId;
-    UserId = userId;
-    Role = role;
-    JoinedAt = DateTime.UtcNow;
-  }
-
-  public void UpdateRole(ParticipantRole role) => Role = role;
-
-  public void AssignRank(int rank)
-  {
-    if (rank <= 0)
-      throw new ArgumentException("Rank must be positive.", nameof(rank));
-    if(rank > 1000)
-      throw new ArgumentException("Rank cannot exceed 1000.", nameof(rank));
-    Rank = rank;
-  }
-}
-
-public class EventMetadata
-{
-  public Guid EventId { get; set; }
-  public Guid OrganizerId { get; private set; }
-  public List<string> Tags { get; private set; } = new();
-  public EventMetadata() { }
-
-  internal EventMetadata(Guid eventId, Guid organizerId)
-  {
-    EventId = eventId;
-    OrganizerId = organizerId;
-  }
-
-  internal void AddTag(string tag)
-  {
-    if (!Tags.Contains(tag))
-      Tags.Add(tag);
-  }
-
-  internal void RemoveTag(string tag)
-  {
-    Tags.Remove(tag);
-  }
-}
-
-public class EventSchedule
-{
-  public Guid Id { get; set; }
-  public Guid EventId { get; set; }
-  public Event Event { get; private set; } = null!;
-  public DateTime StartTime { get; private set; }
-  public DateTime EndTime { get; private set; }
-  public EventSchedule() { }
-
-  public EventSchedule(DateTime startTime, DateTime endTime)
-  {
-    if (startTime >= endTime)
+    if (start >= end)
       throw new ArgumentException("Start time must be before end time.");
-
-    StartTime = startTime;
-    EndTime = endTime;
-  }
-
-  public double DurationInMinutes()
-  {
-    return (EndTime - StartTime).TotalMinutes;
-  }
-
-  public void Reschedule(DateTime newStart, DateTime newEnd)
-  {
-    if (newStart >= newEnd)
-      throw new ArgumentException("New start time must be before end time.");
-    StartTime = newStart;
-    EndTime = newEnd;
+    if (start < DateTime.UtcNow)
+      throw new ArgumentException("Start time cannot be in the past.");
+    if (end < DateTime.UtcNow)
+      throw new ArgumentException("End time cannot be in the past.");
+    if ((end - start).TotalDays > 365)
+      throw new ArgumentException("Event duration cannot exceed 1 year.");
+    if ((end - start).TotalMinutes < 15)
+      throw new ArgumentException("Event duration must be at least 15 minutes.");
   }
 }

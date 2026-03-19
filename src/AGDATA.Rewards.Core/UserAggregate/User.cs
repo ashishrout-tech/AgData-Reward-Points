@@ -1,4 +1,5 @@
-﻿using AGDATA.Rewards.Core.Common;
+﻿using System.Text.RegularExpressions;
+using AGDATA.Rewards.Core.Common;
 using AGDATA.Rewards.Core.UserAggregate.ValueObjects;
 using Project.Domain.Entities;
 
@@ -24,8 +25,7 @@ public sealed class User : IAggregateRoot
   {
     if (string.IsNullOrWhiteSpace(employeeId))
       throw new ArgumentException("EmployeeId cannot be null or empty.", nameof(employeeId));
-    if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
-      throw new ArgumentException("Password must be at least 8 characters.", nameof(password));
+    CheckPasswordStrength(password);
 
     Id = Guid.NewGuid();
     Name = name;
@@ -98,5 +98,14 @@ public sealed class User : IAggregateRoot
   {
     if (!IsActive)
       throw new InvalidOperationException("User is inactive.");
+  }
+
+  private static void CheckPasswordStrength(string password)
+  {
+    if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+      throw new ArgumentException("Password must be at least 8 characters.", nameof(password));
+    string pattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$";
+    if (!Regex.IsMatch(password, pattern))
+      throw new ArgumentException("Password must contain uppercase, lowercase, number, and special character.", nameof(password));
   }
 }
